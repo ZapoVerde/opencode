@@ -80,13 +80,16 @@ Start from the exact upstream base used by the current patched release, not from
 
 Upgrades create a new patched integration branch from the new upstream version and then deliberately re-apply only the patches that are still needed.
 
-1. Fetch the new upstream source and identify the exact release/tag/commit to run:
+1. Fetch the exact upstream release tag and resolve the tag ref itself:
 
    ```bash
-   git fetch upstream
-   git switch --detach <new-upstream-release-or-commit>
+   git fetch upstream refs/tags/vX.XX.X
+   git ls-remote upstream refs/tags/vX.XX.X
+   git switch --detach <exact-tag-commit>
    git switch -c opencode-X.XX.X-patched
    ```
+
+   Use the commit referenced by `refs/tags/vX.XX.X`, not a GitHub release object's `target_commitish`. Verify the checked-out package version matches the intended release before applying patches.
 
 2. Review every active entry in `PATCHES.md` against the new upstream source.
 
@@ -123,6 +126,14 @@ The OpenCode stack runs source from `/config/workspace/opencode`. Its compose co
 
 The container provides the runtime while the bind-mounted checkout provides the application source. Source changes therefore require a stack/container restart, not an image rebuild, unless the runtime image itself also changes.
 
+The runtime image must support a clean install of the checked-out release. In the current stack this means:
+
+- Bun is pinned to the version declared by the repository root `packageManager` (`1.3.14` for v1.18.27);
+- `node-gyp` is present for native dependency install scripts;
+- startup uses `bun install --frozen-lockfile`, so a restart cannot silently rewrite `bun.lock`.
+
+When validating a Router-created linked worktree from inside the OpenCode container, use OpenCode only for toolchain execution. The linked worktree's `.git` file contains Router's `/workspace/...` absolute Git metadata path, while OpenCode sees the checkout under `/config/workspace/...`; Git operations for those worktrees therefore remain Router-owned.
+
 ## Development environment
 
 This is a Bun/TypeScript monorepo. From `packages/opencode/`:
@@ -136,6 +147,6 @@ This is a Bun/TypeScript monorepo. From `packages/opencode/`:
 
 - Keep patch branches independent: always branch from the relevant upstream release base, never from the patched integration branch. Prefer version-qualified names such as `fix/luna-oauth-model-filtering-v1.18.27` so the base is explicit and historical patches remain reproducible.
 - `PATCHES.md` tracks our local source patches. The repository `patches/` directory is upstream dependency/package patch machinery and is a different thing.
-- The clone may be shallow. Fetch the exact release tag or release commit before creating a patch. If a tag is not installed as a local ref, pin the release commit SHA directly rather than relying on `FETCH_HEAD`, which can be overwritten by a later fetch.
+- The clone may be shallow. Resolve the actual `refs/tags/vX.XX.X` ref and pin that commit before creating a patch. Do not substitute GitHub release `target_commitish`, and do not rely on `FETCH_HEAD`, which can be overwritten by a later fetch.
 - `bun install` can modify `bun.lock`. Treat lockfile changes as source changes: inspect them and commit them only when they are intentionally part of the patch or upgrade. Do not fold incidental install churn into an unrelated patch.
 - The core agent loop (`runLoop`) lives in `packages/opencode/src/session/prompt.ts`, not in a file named `loop`.
