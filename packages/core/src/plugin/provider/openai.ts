@@ -22,7 +22,7 @@ const browserMethodID = Integration.MethodID.make("chatgpt-browser")
 const headlessMethodID = Integration.MethodID.make("chatgpt-headless")
 // ChatGPT accounts lost gpt-5.4 and gpt-5.4-mini in Codex on 2026-08-31 (replacements: gpt-5.6-terra, gpt-5.6-luna).
 const codexAllowed = new Set(["gpt-5.5", "gpt-5.3-codex-spark"])
-const codexDisallowed = new Set(["gpt-5.5-pro", "gpt-5.6"])
+const codexDisallowed = new Set(["gpt-5.5-pro"])
 
 type Pkce = {
   verifier: string
