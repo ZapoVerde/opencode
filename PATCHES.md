@@ -14,7 +14,17 @@ Upstream base: `b2e6e764a88dbcc9231a2ac1f73d011817f80f98` (`upstream/v2` at work
 
 ### Active local source patches
 
-None yet.
+#### OpenAI OAuth: preserve base GPT-5.6 / Luna model availability
+
+- **Status:** Applied
+- **Patch branch:** `fix/luna-oauth-model-filtering-v2`
+- **Upstream base:** `upstream/v2` / `b2e6e764a88dbcc9231a2ac1f73d011817f80f98`
+- **Patch commit:** `254dd84db8b9c4c8213597b99965016ce590cd8b`
+- **Files:** `packages/core/src/plugin/provider/openai.ts`, `packages/core/test/plugin/provider-openai.test.ts`
+- **Problem:** V2 explicitly places base `gpt-5.6` in `codexDisallowed`, hiding the local ChatGPT/Luna model path under OpenAI OAuth.
+- **Fix:** Remove only base `gpt-5.6` from `codexDisallowed`; retain the generic Codex eligibility filter and the explicit `gpt-5.5-pro` rejection.
+- **Verification:** From `packages/core`, `bun test test/plugin/provider-openai.test.ts` passes 4/4 and explicitly expects base `gpt-5.6` enabled under ChatGPT OAuth.
+- **When updating:** Check `packages/core/src/plugin/provider/openai.ts` first. If upstream no longer explicitly rejects base `gpt-5.6` or otherwise supports the required model path, verify behavior and retire this patch instead of replaying it.
 
 Before carrying any OC1 patch forward, verify the required behavior against this exact V2 base. In particular, test OpenAI OAuth availability for base `gpt-5.6` / Luna. If V2 already supports it, do not recreate the OC1 patch.
 
