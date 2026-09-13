@@ -8,6 +8,7 @@ import { ProviderGroup } from "./groups/provider.js"
 import { makeSessionGroup } from "./groups/session.js"
 import { makePermissionGroup } from "./groups/permission.js"
 import { FileSystemGroup } from "./groups/fs.js"
+import { ToolControlGroup } from "./groups/tool-control.js"
 import { makeFormGroup } from "./groups/form.js"
 import { CommandGroup } from "./groups/command.js"
 import { SkillGroup } from "./groups/skill.js"
@@ -48,6 +49,7 @@ type LocationGroups<LocationId extends HttpApiMiddleware.AnyId> =
   | HttpApiGroup.AddMiddleware<typeof CredentialGroup, LocationId>
   | HttpApiGroup.AddMiddleware<typeof ProjectGroup, LocationId>
   | HttpApiGroup.AddMiddleware<typeof FileSystemGroup, LocationId>
+  | HttpApiGroup.AddMiddleware<typeof ToolControlGroup, LocationId>
   | HttpApiGroup.AddMiddleware<typeof CommandGroup, LocationId>
   | HttpApiGroup.AddMiddleware<typeof SkillGroup, LocationId>
   | HttpApiGroup.AddMiddleware<typeof RpcGroup, LocationId>
@@ -168,6 +170,7 @@ const makeApiFromGroup = <
     .add(makeFormGroup(locationMiddleware, formLocationMiddleware))
     .add(makePermissionGroup(locationMiddleware, sessionLocationMiddleware))
     .add(FileSystemGroup.middleware(locationMiddleware))
+    .add(ToolControlGroup.middleware(locationMiddleware))
     .add(CommandGroup.middleware(locationMiddleware))
     .add(SkillGroup.middleware(locationMiddleware))
     .add(RpcGroup.middleware(locationMiddleware))
