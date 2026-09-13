@@ -14,6 +14,19 @@ Upstream base: `b2e6e764a88dbcc9231a2ac1f73d011817f80f98` (`upstream/v2` at work
 
 ### Active local source patches
 
+#### Native tool control HTTP boundary
+
+- **Status:** Applied
+- **Patch branch:** `feat/native-tool-control-v2`
+- **Upstream base:** `upstream/v2` / `b2e6e764a88dbcc9231a2ac1f73d011817f80f98`
+- **Patch commit:** `388cc88b42f75fbf2efe38a0d8dff1a44e743429`
+- **Files:** `packages/protocol/src/api.ts`, `packages/protocol/src/groups/tool-control.ts`, `packages/server/src/handlers.ts`, `packages/server/src/handlers/tool-control.ts`
+- **Problem:** OpenCode has a model-independent `Tool.Snapshot.execute` boundary but no authenticated external API for direct native-tool control.
+- **Fix:** Expose location-scoped tool discovery and session-scoped native tool execution through the existing HTTP API, preserving OpenCode tool schemas, permissions, hooks, and execution semantics without invoking a model.
+- **Verification:** Server typecheck passes; live `/api/tool` discovery exposes native tools including `read`; Taskbridge E2E executes native `read` successfully without calling the prompt/model path.
+- **When updating:** Check for an upstream native tool-control endpoint. Retire this patch if upstream exposes equivalent discovery and direct execution semantics.
+
+
 #### OpenAI OAuth: preserve base GPT-5.6 / Luna model availability
 
 - **Status:** Applied
