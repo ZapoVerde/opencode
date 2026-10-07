@@ -16,9 +16,9 @@ test("resolution groups Effect-native lifecycle operations only for the managed 
     port: 0,
     fetch() {
       return Response.json({
-        healthy: true,
         version: OPENCODE_VERSION,
         pid: process.pid,
+        urls: [],
       })
     },
   })
@@ -38,7 +38,7 @@ test("resolution groups Effect-native lifecycle operations only for the managed 
         pid: process.pid,
       }),
     )
-    const resolved = await runPromise(ServerConnection.resolve({}))
+    const resolved = await runPromise(ServerConnection.resolve())
 
     expect(resolved.endpoint.url).toBe(server.url.toString())
     expect(resolved.service).toBeDefined()

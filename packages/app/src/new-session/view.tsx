@@ -13,8 +13,6 @@ import {
   PromptProjectSelector,
   type PromptProjectController,
 } from "@/new-session/project/selector"
-import { StatusPopover } from "@/shell/status/status-popover"
-import { TitlebarRight } from "@/shell/titlebar/right-slot"
 import { useLanguage } from "@/runtime/i18n/language"
 import { useWorkspaceLocation } from "@/workspaces/location"
 import { useProviders } from "@/providers/catalog/providers"
@@ -46,8 +44,10 @@ export function NewSessionView(props: {
     WorkspaceOnboardingSchema,
     { used: false },
   )
+
   const select = (value: string) => {
     props.workspace.selection.set(value)
+
     if (value !== "main") setOnboarding("used", true)
   }
 
@@ -102,6 +102,8 @@ export function NewSessionView(props: {
           </div>
         </div>
         <NewSessionTips
+          selection={props.composer.model.selection}
+          onDone={props.composer.restoreFocus}
           workspaceEligible={
             !!props.project.selected() &&
             props.workspace.bar.visible() &&
@@ -115,76 +117,87 @@ export function NewSessionView(props: {
   )
 }
 
-export function NewSessionStatus(props: { visible: boolean }) {
-  const language = useLanguage()
-  return (
-    <TitlebarRight>
-      <Show when={props.visible}>
-        <Tooltip appearance="standard" placement="bottom" value={language.t("status.popover.trigger")}>
-          <StatusPopover />
-        </Tooltip>
-      </Show>
-    </TitlebarRight>
-  )
-}
-
-function NewSessionTips(props: { workspaceEligible: boolean; onWorkspace: () => void }) {
+function NewSessionTips(props: {
+  selection: ComposerModel["model"]["selection"]
+  onDone: () => void
+  workspaceEligible: boolean
+  onWorkspace: () => void
+}) {
   const language = useLanguage()
   const dialog = useDialog()
   const sdk = useWorkspaceLocation()
   const providers = useProviders(() => sdk().directory)
+
   const [providerState, setProviderState, , providerReady] = persisted(
     Persist.global("new-session.provider-tip"),
     ProviderTipSchema,
     { dismissedAt: 0 },
   )
+
   const [workspaceState, setWorkspaceState, , workspaceReady] = persisted(
     Persist.global("new-session.workspace-tip"),
     WorkspaceTipSchema,
     { dismissedAt: 0 },
   )
+
   const workspaceVisible = createMemo(
     () =>
       props.workspaceEligible &&
       workspaceReady() &&
       Date.now() - workspaceState.dismissedAt >= providerTipDismissalDuration,
   )
+
   const providerVisible = createMemo(
     () =>
-      providers.ready() &&
       providerReady() &&
-      providers.paid().length === 0 &&
+      providers.anyConnection() === false &&
       Date.now() - providerState.dismissedAt >= providerTipDismissalDuration,
   )
+
   const tip = createMemo<"workspace" | "provider" | undefined>(() => {
     if (providerVisible()) return "provider"
+
     if (workspaceVisible()) return "workspace"
   })
+
   const displayed = createMemo<"workspace" | "provider" | undefined>((previous) => tip() ?? previous)
   const [ref, setRef] = createSignal<HTMLDivElement>()
+
   const presence = createPresence({
     show: () => tip() !== undefined,
     element: () => ref() ?? null,
   })
+
   const open = () => {
     const current = tip()
+
     if (!current) return
+
     if (current === "workspace") {
       setWorkspaceState("dismissedAt", Date.now())
       props.onWorkspace()
+
       return
     }
+
     void import("@/providers/connect/dialog").then(({ DialogConnectProvider }) => {
-      void dialog.show(() => <DialogConnectProvider directory={sdk().directory} />)
+      void dialog.show(() => (
+        <DialogConnectProvider directory={sdk().directory} selection={props.selection} onDone={props.onDone} />
+      ))
     })
   }
+
   const dismiss = () => {
     const current = tip()
+
     if (!current) return
+
     if (current === "workspace") {
       setWorkspaceState("dismissedAt", Date.now())
+
       return
     }
+
     setProviderState("dismissedAt", Date.now())
   }
 

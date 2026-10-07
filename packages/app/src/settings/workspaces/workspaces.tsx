@@ -4,7 +4,7 @@ import { createStore } from "solid-js/store"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
 import { Key } from "@solid-primitives/keyed"
 import type { SessionInfo } from "@opencode/client/promise"
-import { useQuery } from "@tanstack/solid-query"
+import { useQuery, useQueryClient } from "@tanstack/solid-query"
 import { Button } from "@opencode/ui/button"
 import { Dialog, DialogFooter, DialogHeader, DialogTitleGroup } from "@opencode/ui/dialog"
 import { Icon } from "@opencode/ui/icon"
@@ -12,23 +12,20 @@ import { IconButton } from "@opencode/ui/icon-button"
 import { Menu } from "@opencode/ui/menu"
 import { Tooltip } from "@opencode/ui/tooltip"
 import { useDialog } from "@opencode/ui/context/dialog"
-import { getFilename } from "@opencode/util/path"
+import { containsDirectory, getFilename } from "@opencode/util/path"
 import { useLanguage } from "@/runtime/i18n/language"
-import { useServerSDK } from "@/runtime/server/client"
-import { useData } from "@/runtime/server/current"
+import { useServer } from "@/runtime/server/current"
 import { showToast } from "@/shell/notifications/toast"
 import { getRelativeTime } from "@/shell/time"
 import { sessionLabel } from "@/session/title"
 import { pathKey } from "@/workspaces/path-key"
+import { worktreeInventoryKey } from "@/workspaces/inventory"
 import { SettingsList } from "@/settings/list"
-import { InlineServerSelect } from "@/settings/server-select"
 import { useTabs } from "@/shell/tabs/tabs"
-import { usePlatform } from "@/runtime/platform/platform"
-import { clearWorkspaceTerminals } from "@/session/terminal/context"
+import { useHostApis } from "@/runtime/extension/root"
 import { ServerConnection } from "@/runtime/server/registry"
 import type { Project } from "@/runtime/server/types"
 import {
-  containsDirectory,
   filterWorkspaceInventory,
   inspectWorkspaceDeletion,
   managedWorkspaceDirectories,
@@ -40,7 +37,7 @@ import {
 } from "@/workspaces/paths"
 import { listAllSessions } from "@/session/list"
 import type { ServerScope } from "@/runtime/server/scope"
-import { normalizeProjectInfo } from "@/runtime/server/global-sync/utils"
+import { workspaceInventoryQuery } from "./queries"
 import "@/settings/settings.css"
 
 type Workspace = {
@@ -48,54 +45,72 @@ type Workspace = {
   project: Project
 }
 
-export const SettingsWorkspaces: Component<{ activeDirectory?: string; resetProjectFilter: () => number }> = (
-  props,
-) => {
+export const SettingsWorkspaces: Component<{
+  activeDirectory?: string
+  resetProjectFilter?: () => number
+  projectID?: string
+}> = (props) => {
   const dialog = useDialog()
   const language = useLanguage()
-  const serverSDK = useServerSDK()
-  const data = useData()
+  const server = useServer()
+  const serverSDK = server.ctx.sdk
+  const queryClient = useQueryClient()
+  const data = server.ctx.data
   const tabs = useTabs()
-  const platform = usePlatform()
-  const [store, setStore] = createStore({
+  const extensions = useHostApis()
+
+  const [store, setStore] = createStore<{
+    project: string
+    transaction: "confirm" | "running" | undefined
+    deleting: string[]
+    removing: string[]
+  }>({
     project: "all",
-    transaction: undefined as "confirm" | "running" | undefined,
-    deleting: [] as string[],
-    removing: [] as string[],
+    transaction: undefined,
+    deleting: [],
+    removing: [],
   })
+
   createEffect(() => {
-    props.resetProjectFilter()
+    if (props.projectID) {
+      setStore("project", props.projectID)
+
+      return
+    }
+
+    props.resetProjectFilter?.()
     setStore("project", "all")
   })
 
   const projectQuery = useQuery(() => ({
-    queryKey: [serverSDK.scope, "settings-workspace-projects"] as const,
+    ...workspaceInventoryQuery(server.ctx, queryClient, props.projectID),
     enabled: serverSDK.connection.status() === "connected",
-    queryFn: async () =>
-      Promise.all(
-        (await serverSDK.api.project.list()).map(async (project) => {
-          const worktrees = await serverSDK.api.worktree
-            .list({ location: { directory: project.canonical } })
-            .catch(() => [{ directory: project.canonical }, ...project.sandboxes.map((directory) => ({ directory }))])
-          return normalizeProjectInfo({ ...project, worktrees })
-        }),
-      ),
-    refetchOnMount: "always",
+    refetchOnMount: true,
   }))
+
   const inventory = createMemo(() => (projectQuery.isPending ? [] : (projectQuery.data ?? [])))
   const workspaces = createMemo(() => workspaceInventory(inventory()))
   const projects = createMemo(() => inventory().filter((project) => managedWorkspaceDirectories(project).length > 0))
   const projectName = (project: Project) => project.name || getFilename(project.worktree)
+
   const projectOptions = createMemo(() => [
     { id: "all", label: language.t("settings.workspaces.filter.all") },
     ...projects().map((project) => ({ id: project.id, label: projectName(project) })),
   ])
+
   const selectedProject = createMemo(() =>
-    store.project === "all" || projects().some((project) => project.id === store.project) ? store.project : "all",
+    props.projectID
+      ? props.projectID
+      : store.project === "all" || projects().some((project) => project.id === store.project)
+        ? store.project
+        : "all",
   )
+
   const filtered = createMemo(() => filterWorkspaceInventory(workspaces(), selectedProject()))
+
   const captureDeleteContext = () => {
     const sdk = serverSDK
+
     return {
       sdk,
       data,
@@ -103,15 +118,20 @@ export const SettingsWorkspaces: Component<{ activeDirectory?: string; resetProj
       activeDirectory: props.activeDirectory,
     }
   }
+
   // Fetch sessions per workspace directory instead of paging through every session on the server.
   const loadSessions = async (directories: readonly string[], context = captureDeleteContext()) => {
     const fetched = await Promise.all(
       directories.map((directory) => listAllSessions(context.sdk.api.session, { order: "desc", directory })),
     )
+
     const sessions = fetched.flat()
+
     return mergeWorkspaceSessionInventory(sessions, context.data.session.list())
   }
+
   const workspaceDirectories = createMemo(() => workspaces().map((workspace) => workspace.directory))
+
   const sessionQuery = useQuery(() => ({
     queryKey: [
       serverSDK.scope,
@@ -124,8 +144,13 @@ export const SettingsWorkspaces: Component<{ activeDirectory?: string; resetProj
     placeholderData: (previous) => previous,
     refetchOnMount: "always",
   }))
+
   const sessionsByWorkspace = createMemo(() => {
-    const sessions = sessionQuery.isPending ? [] : (sessionQuery.data ?? [])
+    const sessions = mergeWorkspaceSessionInventory(
+      sessionQuery.isPending ? [] : (sessionQuery.data ?? []),
+      data.session.list(),
+    )
+
     return new Map(
       workspaces().map((workspace) => [
         pathKey(workspace.directory),
@@ -133,23 +158,34 @@ export const SettingsWorkspaces: Component<{ activeDirectory?: string; resetProj
       ]),
     )
   })
+
   const workspaceSessions = (workspace: Workspace) => sessionsByWorkspace().get(pathKey(workspace.directory)) ?? []
+
   const workspacesWithoutSessions = createMemo(() => {
-    if (sessionQuery.isPending || sessionQuery.isError) return []
+    if (sessionQuery.isPending || sessionQuery.isError || sessionQuery.isPlaceholderData) return []
+
     return filtered().filter((workspace) => workspaceSessions(workspace).length === 0)
   })
+
   const sessionCount = (workspace: Workspace) => {
-    if (sessionQuery.isPending) return language.t("session.messages.loading")
-    if (sessionQuery.isError) return language.t("common.requestFailed")
     const count = workspaceSessions(workspace).length
+
+    if (!count && sessionQuery.isPending) return language.t("session.messages.loading")
+
+    if (!count && sessionQuery.isError) return language.t("common.requestFailed")
+
     if (selectedProject() !== "all") return language.plural("settings.workspaces.sessions.filtered", count, { count })
     const project = projectName(workspace.project)
+
     const label = language.plural("settings.workspaces.sessions", count, {
       count,
       project,
     })
+
     const start = label.lastIndexOf(project)
+
     if (start < 0) return label
+
     return (
       <>
         {label.slice(0, start)}
@@ -158,13 +194,18 @@ export const SettingsWorkspaces: Component<{ activeDirectory?: string; resetProj
       </>
     )
   }
+
   const lastActive = (workspace: Workspace) => {
     const updated = workspaceSessions(workspace)[0]?.time.updated
+
     if (!updated) return undefined
+
     return getRelativeTime(new Date(updated).toISOString(), language.t)
   }
+
   const sessionTime = (session: SessionInfo) => {
     if (!session.time.updated) return undefined
+
     return getRelativeTime(new Date(session.time.updated).toISOString(), language.t)
   }
 
@@ -174,21 +215,26 @@ export const SettingsWorkspaces: Component<{ activeDirectory?: string; resetProj
       context.sdk.api.vcs.diff({ location: { directory: workspace.directory }, mode: "branch" }),
       loadSessions([workspace.directory], context),
     ])
+
     const result = inspectWorkspaceDeletion({
       workspace: workspace.directory,
       activeDirectory: context.activeDirectory,
       sessions,
       status: working.data.length > 0 || branch.data.length > 0 ? "dirty" : "clean",
     })
+
     return { result, sessions }
   }
+
   const inspectionMessages = (result: WorkspaceDeleteInspection) => {
     const messages = [
       result.linked ? language.t("settings.workspaces.delete.blocked.linked") : undefined,
       result.dirty ? language.t("workspace.status.dirty") : undefined,
     ].filter((message): message is string => message !== undefined)
+
     return messages
   }
+
   const blocked = (result: WorkspaceDeleteInspection) => {
     showToast({
       variant: "error",
@@ -202,15 +248,19 @@ export const SettingsWorkspaces: Component<{ activeDirectory?: string; resetProj
   const remove = async (workspace: Workspace, force = false, context = captureDeleteContext()) => {
     const key = String(pathKey(workspace.directory))
     setStore("deleting", (items) => [...items, key])
+
     try {
       const preflight = await inspect(workspace, context)
+
       if (!force && (preflight.result.active || preflight.result.linked || preflight.result.dirty)) {
         blocked(preflight.result)
+
         return
       }
+
       const removed = await context.sdk.api.worktree
         .remove({
-          location: { directory: workspace.project.worktree },
+          projectID: workspace.project.id,
           directory: workspace.directory,
           force,
         })
@@ -221,8 +271,10 @@ export const SettingsWorkspaces: Component<{ activeDirectory?: string; resetProj
             title: language.t("workspace.delete.failed.title"),
             description: error instanceof Error ? error.message : language.t("common.requestFailed"),
           })
+
           return false
         })
+
       if (!removed) return
       setStore("removing", (items) => [...items, key])
       await new Promise((resolve) => setTimeout(resolve, 150))
@@ -230,14 +282,18 @@ export const SettingsWorkspaces: Component<{ activeDirectory?: string; resetProj
         if (tab.type !== "draft" || tab.server !== context.server) return
         const directoryMatches = containsDirectory(workspace.directory, tab.directory)
         const worktreeMatches = tab.worktree && containsDirectory(workspace.directory, tab.worktree)
+
         if (!directoryMatches && !worktreeMatches) return
         tabs.updateDraft(tab.draftID, {
           directory: directoryMatches ? workspace.project.worktree : tab.directory,
           worktree: undefined,
         })
       })
-      clearWorkspaceTerminals(workspace.directory, platform, context.sdk.scope)
-      await projectQuery.refetch()
+      extensions.workspaceRemoved({ server: context.server, directory: workspace.directory })
+      await queryClient.invalidateQueries({
+        queryKey: worktreeInventoryKey(context.sdk.scope, workspace.project.id),
+      })
+      await queryClient.invalidateQueries({ queryKey: [context.sdk.scope, "settings-workspace-inventory"] })
     } finally {
       setStore("deleting", (items) => items.filter((item) => item !== key))
       setStore("removing", (items) => items.filter((item) => item !== key))
@@ -245,12 +301,15 @@ export const SettingsWorkspaces: Component<{ activeDirectory?: string; resetProj
   }
 
   let inspectionID = 0
+
   const releaseConfirmation = () => {
     if (store.transaction === "confirm") setStore("transaction", undefined)
   }
+
   const transact = async (task: () => Promise<void>) => {
     if (store.transaction !== "confirm") return
     setStore("transaction", "running")
+
     try {
       await task()
     } catch (error) {
@@ -263,6 +322,7 @@ export const SettingsWorkspaces: Component<{ activeDirectory?: string; resetProj
       setStore("transaction", undefined)
     }
   }
+
   const confirmDelete = (workspace: Workspace) => {
     if (store.transaction) return
     const context = captureDeleteContext()
@@ -282,9 +342,11 @@ export const SettingsWorkspaces: Component<{ activeDirectory?: string; resetProj
       releaseConfirmation,
     )
   }
+
   const removeAll = async (inventory: Workspace[], context: ReturnType<typeof captureDeleteContext>) => {
     await removeWorkspacesSequentially(inventory, (workspace) => remove(workspace, false, context))
   }
+
   const confirmDeleteAll = () => {
     if (store.transaction) return
     const context = captureDeleteContext()
@@ -302,6 +364,7 @@ export const SettingsWorkspaces: Component<{ activeDirectory?: string; resetProj
       releaseConfirmation,
     )
   }
+
   const confirmDeleteWithoutSessions = () => {
     if (store.transaction || workspacesWithoutSessions().length === 0) return
     const context = captureDeleteContext()
@@ -328,18 +391,17 @@ export const SettingsWorkspaces: Component<{ activeDirectory?: string; resetProj
             <h2 class="settings-tab-title">{language.t("settings.tab.workspaces")}</h2>
             <span class="text-11-regular text-v2-text-text-muted">{language.t("settings.workspaces.description")}</span>
           </div>
-          <InlineServerSelect />
         </div>
       </div>
 
       <div class="settings-tab-body settings-workspaces">
         <Show when={filtered().length > 0}>
           <div class="settings-workspaces-toolbar">
-            <span class="settings-workspaces-count">
+            <span class="settings-section-title">
               {language.plural("settings.workspaces.count", filtered().length)}
             </span>
             <div class="settings-workspaces-toolbar-actions">
-              <Show when={projects().length > 1}>
+              <Show when={!props.projectID && projects().length > 1}>
                 <Menu placement="bottom-end" gutter={6}>
                   <Menu.Trigger as={Button} size="small" variant="ghost-muted" class="max-w-48">
                     <span class="min-w-0 truncate">
@@ -409,6 +471,7 @@ export const SettingsWorkspaces: Component<{ activeDirectory?: string; resetProj
                 const linked = () => workspaceSessions(workspace())
                 const key = () => String(pathKey(workspace().directory))
                 const deleting = () => store.deleting.includes(key())
+
                 return (
                   <div class="settings-workspaces-row-motion" data-removing={store.removing.includes(key())}>
                     <div class="settings-workspaces-row">
@@ -513,6 +576,7 @@ function DialogDeleteWorkspaces(props: {
 }) {
   const dialog = useDialog()
   const language = useLanguage()
+
   const remove = () => {
     const deleting = props.onDelete()
     dialog.close()
@@ -554,17 +618,23 @@ function DialogDeleteWorkspace(props: {
 }) {
   const dialog = useDialog()
   const language = useLanguage()
+
   const status = useQuery(() => ({
     queryKey: [props.scope, pathKey(props.workspace.directory), "workspace-delete-status", props.inspectionID] as const,
     queryFn: props.inspect,
     staleTime: 0,
   }))
+
   const descriptions = () => {
     if (status.isPending) return []
+
     if (status.isError) return [language.t("workspace.status.error")]
+
     if (!status.data) return []
+
     return props.inspectionMessages(status.data.result)
   }
+
   const remove = () => {
     const deleting = props.onDelete()
     dialog.close()

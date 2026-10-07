@@ -9,6 +9,7 @@ import { AppProcess } from "@opencode/util/process"
 import { Location } from "../../location.js"
 import type { Adapter, BranchOptions, DiffOptions } from "../../vcs.js"
 import { DiffError } from "../../vcs.js"
+import { gitExecutable } from "../../util/git-executable.js"
 import {
   chunksByFile,
   emptyPatch,
@@ -22,7 +23,8 @@ export const Plugin = define({
   id: "opencode.vcs.git",
   effect: Effect.fn("VcsGitPlugin")(function* (ctx) {
     const location = yield* Location.Service
-    if (location.vcs?.type !== "git") return
+    // Markerless locations need this definition to initialize their first repository.
+    if (location.vcs && location.vcs.type !== "git") return
 
     const processes = yield* AppProcess.Service
     const adapter = make(processes, {
@@ -34,6 +36,13 @@ export const Plugin = define({
       editor.add({
         id: "git",
         name: "Git",
+        init: (input) =>
+          Effect.gen(function* () {
+            const result = yield* processes.run(
+              ChildProcess.make(gitExecutable, ["init"], { cwd: input.worktree, stdin: "ignore" }),
+            )
+            if (result.exitCode !== 0) return yield* Effect.fail(new Error("Git initialization failed"))
+          }),
         info: () => adapter.info(),
         base: () => adapter.base(),
         branches: (input) => adapter.branches({ search: input.search, limit: input.limit }),
@@ -168,7 +177,7 @@ function makeGit(proc: AppProcess.Interface) {
   const run = Effect.fnUntraced(
     function* (args: string[], opts: { cwd: string; maxOutputBytes?: number }) {
       const result = yield* proc.run(
-        ChildProcess.make("git", [...cfg, ...args], {
+        ChildProcess.make(gitExecutable, [...cfg, ...args], {
           cwd: opts.cwd,
           extendEnv: true,
           stdin: "ignore",

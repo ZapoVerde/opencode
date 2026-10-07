@@ -27,6 +27,23 @@ describe("Config.Entry", () => {
     expect(() => Schema.decodeUnknownSync(Config.Info)({ providers: { custom: { canonical: 1 } } })).toThrow()
   })
 
+  test("round-trips disabled and numeric provider HTTP timeouts", () => {
+    const input = {
+      providers: { custom: { settings: { timeout: 900_000, headerTimeout: 600_000, chunkTimeout: false } } },
+    } as const
+    const decoded = Schema.decodeUnknownSync(Config.Info)(input)
+    expect(Schema.encodeSync(Config.Info)(decoded)).toEqual(input)
+    expect(Schema.decodeUnknownSync(Provider.Settings)(decoded.providers?.custom?.settings)).toMatchObject({
+      timeout: 900_000,
+      headerTimeout: 600_000,
+      chunkTimeout: false,
+    })
+    expect(Schema.decodeUnknownSync(Provider.Settings)({ headerTimeout: false, chunkTimeout: 600_000 })).toMatchObject({
+      headerTimeout: false,
+      chunkTimeout: 600_000,
+    })
+  })
+
   test("accepts disabled, fixed, and random web search selection", () => {
     const decode = Schema.decodeUnknownSync(Config.Info)
 
@@ -49,8 +66,6 @@ describe("Config.Entry", () => {
       }),
       new Config.Document({ type: "document", info: new Config.Info({ shell: "/bin/zsh" }) }),
       new Config.Directory({ type: "directory", path: AbsolutePath.make("/project/.opencode") }),
-      new Config.AgentsDirectory({ type: "agents", path: AbsolutePath.make("/project/.agents") }),
-      new Config.ClaudeDirectory({ type: "claude", path: AbsolutePath.make("/project/.claude") }),
     ]
 
     const encoded = Schema.encodeSync(Schema.Array(Config.Entry))(entries)
@@ -59,7 +74,7 @@ describe("Config.Entry", () => {
     expect(decoded).toEqual(entries)
     expect(decoded[0]).toBeInstanceOf(Config.Document)
     expect(decoded[1]).not.toHaveProperty("path")
-    expect(decoded.map((entry) => entry.type)).toEqual(["document", "document", "directory", "agents", "claude"])
+    expect(decoded.map((entry) => entry.type)).toEqual(["document", "document", "directory"])
     expect(decoded[0]?.type === "document" ? decoded[0].info.permissions : undefined).toEqual([
       { action: "shell", resource: "*", effect: "ask" },
       { action: "shell", resource: "git status", effect: "allow" },

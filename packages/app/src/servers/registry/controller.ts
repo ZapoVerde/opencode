@@ -1,14 +1,12 @@
-import { useNavigate } from "@solidjs/router"
 import { createMemo, createResource } from "solid-js"
 import { useGlobal } from "@/runtime/server/runtime"
 import { useLanguage } from "@/runtime/i18n/language"
 import { usePlatform } from "@/runtime/platform/platform"
 import { ServerConnection, useServers } from "@/runtime/server/registry"
-import { useSettings } from "@/settings/model"
 import { useTabs } from "@/shell/tabs/tabs"
 import { type ServerHealth } from "@/runtime/server/health"
 import { showToast } from "@/shell/notifications/toast"
-import { useSsh } from "../ssh/context"
+import { useExtensionServers } from "@/runtime/extension/servers"
 
 function showRequestError(language: ReturnType<typeof useLanguage>, err: unknown) {
   showToast({
@@ -21,12 +19,14 @@ function showRequestError(language: ReturnType<typeof useLanguage>, err: unknown
 function useDefaultServer() {
   const language = useLanguage()
   const platform = usePlatform()
+
   const [defaultKey, defaultKeyActions] = createResource(
     async () => {
       try {
         return (await platform.getDefaultServer?.()) ?? null
       } catch (err) {
         showRequestError(language, err)
+
         return null
       }
     },
@@ -49,9 +49,37 @@ function useDefaultServer() {
   }
 }
 
+export function sortServerConnections(input: {
+  servers: ServerConnection.Any[]
+  health: Record<string, ServerHealth | undefined>
+  defaultKey: ServerConnection.Key | null
+}) {
+  const order = new Map(input.servers.map((item, index) => [item, index] as const))
+
+  const rank = (value?: ServerHealth) => {
+    if (value?.healthy === true) return 0
+
+    if (value?.healthy === false) return 2
+
+    return 1
+  }
+
+  return input.servers.slice().sort((a, b) => {
+    const preferred =
+      Number(ServerConnection.key(b) === input.defaultKey) - Number(ServerConnection.key(a) === input.defaultKey)
+
+    if (preferred !== 0) return preferred
+    const health = rank(input.health[ServerConnection.key(a)]) - rank(input.health[ServerConnection.key(b)])
+
+    if (health !== 0) return health
+
+    return (order.get(a) ?? 0) - (order.get(b) ?? 0)
+  })
+}
+
 export function useServerActionsController() {
   const server = useServers()
-  const ssh = useSsh()
+  const extensions = useExtensionServers()
   const tabs = useTabs()
   const platform = usePlatform()
   const language = useLanguage()
@@ -59,10 +87,10 @@ export function useServerActionsController() {
 
   const remove = async (key: ServerConnection.Key) => {
     try {
-      if (key.startsWith("wsl:")) await platform.wslServers?.removeServer(key)
-      if (key.startsWith("ssh:")) await ssh.forget(key.slice(4))
+      await extensions.entry(key)?.entry.remove?.()
       tabs.removeServer(key)
       server.remove(key)
+
       if ((await platform.getDefaultServer?.()) === key) await defaults.set(null)
     } catch (err) {
       showRequestError(language, err)
@@ -76,10 +104,11 @@ export function useServerActionsController() {
       remove,
       canHide: (key: ServerConnection.Key) => {
         const conn = server.list.find((item) => ServerConnection.key(item) === key)
+
         return server.visible.length > 1 && !!conn && ServerConnection.builtin(conn)
       },
-      isHidden: server.isHidden,
-      setHidden: server.setHidden,
+      isHidden: (key: ServerConnection.Key) => server.isHidden(key),
+      setHidden: (key: ServerConnection.Key, hidden: boolean) => server.setHidden(key, hidden),
     },
   }
 }
@@ -89,27 +118,17 @@ export type ServerActionsController = ReturnType<typeof useServerActionsControll
 export function useServerCollectionController() {
   const server = useServers()
   const global = useGlobal()
-  const settings = useSettings()
   const actions = useServerActionsController()
 
   const items = createMemo(() => server.list)
-  const sorted = createMemo(() => {
-    const raw = items()
-    const list = raw
-    if (!list.length) return list
-    const order = new Map(list.map((item, index) => [item, index] as const))
-    const rank = (value?: ServerHealth) => {
-      if (value?.healthy === true) return 0
-      if (value?.healthy === false) return 2
-      return 1
-    }
-    return list.slice().sort((a, b) => {
-      const diff =
-        rank(global.servers.health[ServerConnection.key(a)]) - rank(global.servers.health[ServerConnection.key(b)])
-      if (diff !== 0) return diff
-      return (order.get(a) ?? 0) - (order.get(b) ?? 0)
-    })
-  })
+
+  const sorted = createMemo(() =>
+    sortServerConnections({
+      servers: items(),
+      health: global.servers.health,
+      defaultKey: actions.defaults.key(),
+    }),
+  )
 
   return {
     collection: {

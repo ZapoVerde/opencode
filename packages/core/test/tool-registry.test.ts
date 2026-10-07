@@ -329,7 +329,6 @@ describe("Tool", () => {
         {
           before: make(),
           "": make(),
-          ["x".repeat(65)]: make(),
           "echo.tool": constant("first"),
           echo_tool: constant("last"),
           execute: make(),
@@ -594,7 +593,9 @@ describe("Tool", () => {
       const snapshot = yield* service.snapshot()
       expect(snapshot.definitions.map((tool) => tool.name)).toEqual(["healthy", "execute"])
       expect(codeModeListings(snapshot.codeModeCatalog!).map((tool) => tool.path)).toEqual(["codemode"])
-      expect((yield* snapshot.execute(call("phone_type")).pipe(Effect.flip)).message).toBe("Unknown tool: phone_type")
+      expect((yield* snapshot.execute(call("phone_type")).pipe(Effect.flip)).message).toBe(
+        'No tool named "phone_type" is currently available. Please use a tool from the available tool list.',
+      )
     }).pipe(Effect.provide(Logger.layer([logger])))
   })
 
@@ -779,7 +780,13 @@ describe("Tool", () => {
           ...identity,
           call: { type: "tool-call", id: "missing", name: "missing", input: {} },
         }),
-      ).toEqual({ status: "error", error: { type: "tool.execution", message: "Unknown tool: missing" } })
+      ).toEqual({
+        status: "error",
+        error: {
+          type: "tool.execution",
+          message: 'No tool named "missing" is currently available. Please use a tool from the available tool list.',
+        },
+      })
 
       yield* transform(
         service,
@@ -845,6 +852,21 @@ describe("Tool", () => {
       expect(contexts).toEqual([
         { sessionID, ...identity, id: Tool.CallID.make("call-context"), progress: expect.any(Function) },
       ])
+    }),
+  )
+  it.effect("lists registered tools by effective name", () =>
+    Effect.gen(function* () {
+      const service = yield* Tool.Service
+      yield* transform(service, { echo: make() }, { codemode: false })
+      yield* transform(service, { count: { ...constant("1"), name: "count" } }, { namespace: "acme" })
+
+      expect((yield* service.list()).map((tool) => [tool.id, tool.name])).toEqual([
+        ["echo", "echo"],
+        ["acme_count", "count"],
+      ])
+
+      yield* service.transform((editor) => editor.remove("echo"))
+      expect((yield* service.list()).map((tool) => tool.id)).toEqual(["acme_count"])
     }),
   )
   ;[

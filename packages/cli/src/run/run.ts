@@ -1,5 +1,5 @@
 import { Service, type Endpoint } from "@opencode/client/effect/service"
-import { OpenCode, type OpenCodeClient, type SessionMessageAssistantTool } from "@opencode/client/promise"
+import { OpenCode, type SessionMessageAssistantTool } from "@opencode/client/promise"
 import { FSUtil } from "@opencode/util/fs-util"
 import { open } from "node:fs/promises"
 import path from "node:path"
@@ -105,7 +105,7 @@ async function execute(input: RunCommandInput, prepared: Prepared, endpoint: End
         next.model ??
         (options.variant
           ? await client.model
-              .default({ location: { directory: next.location.directory, workspace: next.location.workspaceID } })
+              .default({ location: { directory: next.location.directory } })
               .then((result) => result.data)
           : undefined)
       const model = selected
@@ -128,7 +128,7 @@ async function execute(input: RunCommandInput, prepared: Prepared, endpoint: End
   const model = target.model ? { providerID: target.model.providerID, modelID: target.model.id } : undefined
   const variant = target.model?.variant
   if (!target.resume && input.title !== undefined) {
-    await client.session.rename({
+    await client.session.update({
       sessionID: target.session.id,
       title: input.title || prepared.message.slice(0, 50) + (prepared.message.length > 50 ? "..." : ""),
     })

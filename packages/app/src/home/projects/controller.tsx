@@ -1,6 +1,7 @@
 import { useDirectoryPicker } from "@/workspaces/selection/picker"
 import { useServerActionsController } from "@/servers/registry/controller"
 import { useSettingsCommand } from "@/settings/command"
+import { useSettingsSurface } from "@/settings/surface"
 import { type LocalProject } from "@/shell/state/layout"
 import { useLanguage } from "@/runtime/i18n/language"
 import { usePlatform } from "@/runtime/platform/platform"
@@ -15,7 +16,7 @@ import { Persistence } from "@/runtime/persistence/schema"
 import type { HomeController } from "../model"
 import { useGlobal } from "@/runtime/server/runtime"
 import { SessionTransfer } from "@opencode/schema/session-transfer"
-import { useSshAuthenticate } from "@/servers/ssh/authenticate"
+import { useRevealProject } from "./reveal"
 
 export const HomeServersSchema = Schema.Struct({
   collapsed: Persistence.record(Persistence.fallback(Schema.Boolean, () => false)),
@@ -27,21 +28,21 @@ export function createHomeProjectsController(home: HomeController) {
   const dialog = useDialog()
   const language = useLanguage()
   const openSettings = useSettingsCommand()
+  const settings = useSettingsSurface()
   const serverManagement = useServerActionsController()
   const global = useGlobal()
-  const authenticate = useSshAuthenticate()
+  const authenticate = ServerConnection.authenticate
+  const revealProject = useRevealProject()
   const [_state, setState, _, ready] = persisted(Persist.global("home.servers"), HomeServersSchema, { collapsed: {} })
+
   const [state] = createResource(
     () => ready.promise ?? Promise.resolve(),
     (promise) => promise.then(() => _state),
     { initialValue: _state },
   )
+
   function directories(project: LocalProject) {
     return [project.worktree, ...(project.sandboxes ?? [])]
-  }
-
-  function canRevealProject(conn: ServerConnection.Any) {
-    return platform.platform === "desktop" && !!platform.openPath && ServerConnection.local(conn)
   }
 
   function choose(conn: ServerConnection.Any) {
@@ -115,11 +116,14 @@ export function createHomeProjectsController(home: HomeController) {
               const data = await Schema.decodeUnknownPromise(Schema.fromJsonString(SessionTransfer.Data))(
                 await file.text(),
               )
+
               const api = home.server.context(conn).sdk.api.session
+
               const imported = await api.import({
                 ...Schema.encodeSync(SessionTransfer.Data)(data),
                 location: { directory: project.worktree },
               } as Parameters<typeof api.import>[0])
+
               home.project.openProjectSession(conn, project.worktree, imported)
             },
           )
@@ -131,12 +135,14 @@ export function createHomeProjectsController(home: HomeController) {
           })
       },
       edit: (conn: ServerConnection.Any, project: LocalProject) => {
-        void import("@/settings/workspaces/project-dialog").then(({ DialogEditProject }) => {
-          void dialog.show(() => <DialogEditProject server={conn} project={project} />)
+        settings.openProject({
+          server: ServerConnection.key(conn),
+          project: project.worktree,
         })
       },
       unseenCount: (conn: ServerConnection.Any, project: LocalProject) => {
         const notification = global.ensureServerCtx(conn).notification
+
         return directories(project).reduce((total, directory) => total + notification.project.unseenCount(directory), 0)
       },
       clearNotifications: (conn: ServerConnection.Any, project: LocalProject) => {
@@ -147,6 +153,7 @@ export function createHomeProjectsController(home: HomeController) {
       },
       choose: (conn: ServerConnection.Any) => {
         if (authenticate(conn, () => choose(conn))) return
+
         if (home.server.health(conn)?.healthy === false) return
         choose(conn)
       },
@@ -157,21 +164,14 @@ export function createHomeProjectsController(home: HomeController) {
           home.server.context(conn).projects,
           directory,
         )
+
         if (next) home.selection.set(next)
       },
       move: (conn: ServerConnection.Any, worktree: string, index: number) => {
         home.server.context(conn).projects.move(worktree, index)
       },
-      canReveal: canRevealProject,
-      reveal: (conn: ServerConnection.Any, project: LocalProject) => {
-        if (!platform.openPath || !canRevealProject(conn)) return
-        platform.openPath(project.worktree).catch((cause: unknown) =>
-          showToast({
-            title: language.t("common.requestFailed"),
-            description: errorMessage(cause, language.t("common.requestFailed")),
-          }),
-        )
-      },
+      canReveal: revealProject.available,
+      reveal: revealProject.reveal,
     },
     utility: {
       settings: openSettings,

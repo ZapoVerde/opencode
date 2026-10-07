@@ -64,7 +64,8 @@ if (!targets.length) throw new Error(`Unknown build target: ${requestedTarget}`)
 
 if (!skipInstall)
   await $`bun install --os="*" --cpu="*" @opentui/core@${pkg.dependencies["@opentui/core"]} @opencode-ai/pty@${pkg.dependencies["@opencode-ai/pty"]}`
-const appArchive = await buildAppArchive(Script.channel, { skipBuild: skipWebUi })
+const appArchive = path.join(dir, ".cache", "bun-app-archive.bin")
+await Bun.write(appArchive, await buildAppArchive(Script.channel, { skipBuild: skipWebUi }))
 const appAssetsPlugin: BunPlugin = {
   name: "opencode-app-assets",
   setup(build) {
@@ -74,7 +75,10 @@ const appAssetsPlugin: BunPlugin = {
     }))
     build.onLoad({ filter: /^opencode-app-assets$/, namespace: "opencode" }, () => ({
       loader: "js",
-      contents: `export default ${JSON.stringify(appArchive)}`,
+      // Embedded as a file, not a string: its bytes go into the executable once and unencoded.
+      contents: `import { readFileSync } from "node:fs"
+import archive from ${JSON.stringify(appArchive.replaceAll("\\", "/"))} with { type: "file" }
+export default () => readFileSync(archive)`,
     }))
   },
 }
@@ -140,6 +144,7 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
       ...(executablePath ? { executablePath } : {}),
       outfile: path.join(outdir, name, "bin", binary),
       execArgv: [
+        "--smol",
         `--user-agent=opencode/${Script.channel}/${Script.version}/cli`,
         "--use-system-ca",
         "--no-warnings",
