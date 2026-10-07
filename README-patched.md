@@ -41,6 +41,12 @@ V2 is moving quickly. Treat an update as a fresh upstream base, not as permissio
 - `origin`: `https://github.com/ZapoVerde/opencode.git` — persistent local patch/integration branches
 - `upstream`: `https://github.com/anomalyco/opencode.git` — authoritative OpenCode source
 
+## Source-run identity
+
+The OC2 stack runs `packages/cli/src/index.ts` directly, rather than a release-built CLI. In that mode the compile-time version constants are absent, so `packages/cli/src/version.ts` falls back to `local`. The OpenCode Console uses the server's User-Agent to identify the client; a `local` version can therefore fail the Zen free-model client check even when the account is connected.
+
+For the current source checkout, `/config/workspace/stacks/opencode2/compose.yaml` sets `OPENCODE_VERSION=2.0.24` and `OPENCODE_CHANNEL=beta`. Keep these values aligned with the actual source package/channel. The source fallback to these environment variables is a tracked local patch in `PATCHES.md`; recreate the OC2 service after changing its environment.
+
 ## Router2 direction
 
 Router2 should prefer OpenCode's external server/API boundary. Avoid modifying OpenCode source unless a concrete missing capability is demonstrated. Any required Router2 source change must be treated as an explicit patch under the lifecycle above.

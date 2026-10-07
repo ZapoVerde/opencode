@@ -39,6 +39,18 @@ Upstream base: `b2e6e764a88dbcc9231a2ac1f73d011817f80f98` (`upstream/v2` at work
 - **Verification:** From `packages/core`, `bun test test/plugin/provider-openai.test.ts` passes 4/4 and explicitly expects base `gpt-5.6` enabled under ChatGPT OAuth.
 - **When updating:** Check `packages/core/src/plugin/provider/openai.ts` first. If upstream no longer explicitly rejects base `gpt-5.6` or otherwise supports the required model path, verify behavior and retire this patch instead of replaying it.
 
+#### Source-run client version metadata for Zen free models
+
+- **Status:** Applied
+- **Patch branch:** `zen-version-v2`
+- **Patch commit:** `af373e84d4`
+- **Upstream base:** `upstream/v2` / `a90ad8566d`
+- **Files:** `packages/cli/src/version.ts`; runtime settings in `/config/workspace/stacks/opencode2/compose.yaml` (deployment file, outside this repository)
+- **Problem:** The OC2 stack runs the CLI directly from source. Without build-time constants, its server identified itself as `opencode/local/local/cli-node`; Zen free-model requests were rejected with `FreeTierError` even though the Console account was connected.
+- **Fix:** When compile-time metadata is absent, allow `OPENCODE_VERSION` and `OPENCODE_CHANNEL` environment variables to supply the runtime identity. The current stack sets these to the source package version (`2.0.24`) and channel (`beta`), so the server reports `opencode/beta/2.0.24/cli-node` rather than a `local` version.
+- **Verification:** With those environment values, `opencode2 run --standalone --model opencode/nemotron-3.5-lightning-free` used the existing authenticated Console credential and returned `OK`; the user subsequently confirmed Muse Spark worked in the running OC2 app.
+- **When updating:** Keep the advertised version aligned with the actual source package and channel; do not hard-code a different release identity. Check whether upstream has changed source-run metadata defaults or the Zen free-tier client check, and retest a real free-model request before carrying this patch forward.
+
 Before carrying any OC1 patch forward, verify the required behavior against this exact V2 base. In particular, test OpenAI OAuth availability for base `gpt-5.6` / Luna. If V2 already supports it, do not recreate the OC1 patch.
 
 ## Patch entry template
