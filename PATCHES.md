@@ -10,7 +10,14 @@ The repository `patches/` directory is OpenCode dependency/package patch machine
 
 ## V2 beta — branch: `opencode2-v2-patched`
 
-Upstream base: `b2e6e764a88dbcc9231a2ac1f73d011817f80f98` (`upstream/v2` at workspace creation on 2026-09-12).
+Workspace base: `b2e6e764a88dbcc9231a2ac1f73d011817f80f98` (`upstream/v2` at workspace creation on 2026-09-12).
+
+Current upstream base: `4617210822` (`upstream/v2` merged 2026-10-13). That merge (113 commits, including `chore: upgrade Effect to 4.0.1`) applied without textual conflicts. Two adaptations were required on the integration branch and are recorded in the per-patch entries below:
+
+- Effect 4.0.1 renamed the `effect/unstable/httpapi` module to `effect/http-api`; the native tool-control protocol group and server handler were updated to the new path.
+- The OpenAI provider test's `catalog.model.get` calls were replaced with the upstream `models.get` service, keeping the local base `gpt-5.6` expectation.
+
+Upstream still does not address any active patch: there is no native tool-control endpoint, base `gpt-5.6` remains in `codexDisallowed`, and source-run identity still falls back to `"local"`.
 
 ### Active local source patches
 
@@ -23,8 +30,8 @@ Upstream base: `b2e6e764a88dbcc9231a2ac1f73d011817f80f98` (`upstream/v2` at work
 - **Files:** `packages/protocol/src/api.ts`, `packages/protocol/src/groups/tool-control.ts`, `packages/server/src/handlers.ts`, `packages/server/src/handlers/tool-control.ts`
 - **Problem:** OpenCode has a model-independent `Tool.Snapshot.execute` boundary but no authenticated external API for direct native-tool control.
 - **Fix:** Expose location-scoped tool discovery and session-scoped native tool execution through the existing HTTP API, preserving OpenCode tool schemas, permissions, hooks, and execution semantics without invoking a model.
-- **Verification:** Server typecheck passes; live `/api/tool` discovery exposes native tools including `read`; Taskbridge E2E executes native `read` successfully without calling the prompt/model path.
-- **When updating:** Check for an upstream native tool-control endpoint. Retire this patch if upstream exposes equivalent discovery and direct execution semantics.
+- **Verification:** Server typecheck passes; live `/api/tool` discovery exposes native tools including `read`; Taskbridge E2E executes native `read` successfully without calling the prompt/model path. Re-verified after the 2026-10-13 upstream merge with `packages/protocol` and `packages/server` typecheck and a regenerated client.
+- **When updating:** Check for an upstream native tool-control endpoint. Retire this patch if upstream exposes equivalent discovery and direct execution semantics. Import HTTP API primitives from `effect/http-api`; `effect/unstable/httpapi` no longer exists as of Effect 4.0.1.
 
 
 #### OpenAI OAuth: preserve base GPT-5.6 / Luna model availability
@@ -36,7 +43,7 @@ Upstream base: `b2e6e764a88dbcc9231a2ac1f73d011817f80f98` (`upstream/v2` at work
 - **Files:** `packages/core/src/plugin/provider/openai.ts`, `packages/core/test/plugin/provider-openai.test.ts`
 - **Problem:** V2 explicitly places base `gpt-5.6` in `codexDisallowed`, hiding the local ChatGPT/Luna model path under OpenAI OAuth.
 - **Fix:** Remove only base `gpt-5.6` from `codexDisallowed`; retain the generic Codex eligibility filter and the explicit `gpt-5.5-pro` rejection.
-- **Verification:** From `packages/core`, `bun test test/plugin/provider-openai.test.ts` passes 4/4 and explicitly expects base `gpt-5.6` enabled under ChatGPT OAuth.
+- **Verification:** From `packages/core`, `bun test test/plugin/provider-openai.test.ts` passes 5/5 (re-verified after the 2026-10-13 upstream merge, using the upstream `models.get` service) and explicitly expects base `gpt-5.6` enabled under ChatGPT OAuth.
 - **When updating:** Check `packages/core/src/plugin/provider/openai.ts` first. If upstream no longer explicitly rejects base `gpt-5.6` or otherwise supports the required model path, verify behavior and retire this patch instead of replaying it.
 
 #### Source-run client version metadata for Zen free models
