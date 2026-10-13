@@ -1774,6 +1774,47 @@ export interface FileApi<E = never> {
   readonly find: FileFindOperation<E>
 }
 
+export type ServerToolControlToolListInput = {
+  readonly location?: { readonly directory?: string | undefined } | undefined
+}
+export type ServerToolControlToolListOutput = {
+  readonly location: Location.PublicRef
+  readonly data: ReadonlyArray<{
+    readonly name: string
+    readonly description: string
+    readonly inputSchema: unknown
+    readonly outputSchema?: unknown | undefined
+  }>
+}
+export type ServerToolControlToolListOperation<E = never> = (
+  input?: ServerToolControlToolListInput,
+) => Effect.Effect<ServerToolControlToolListOutput, E>
+
+export type ServerToolControlToolExecuteInput = {
+  readonly location?: { readonly directory?: string | undefined } | undefined
+  readonly sessionID: Session.ID
+  readonly tool: string
+  readonly input: unknown
+}
+export type ServerToolControlToolExecuteOutput = {
+  readonly location: Location.PublicRef
+  readonly data: {
+    readonly output?: unknown | undefined
+    readonly content: ReadonlyArray<unknown>
+    readonly metadata?: { readonly [x: string]: unknown } | undefined
+  }
+}
+export type ServerToolControlToolExecuteOperation<E = never> = (
+  input: ServerToolControlToolExecuteInput,
+) => Effect.Effect<ServerToolControlToolExecuteOutput, E>
+
+export interface ServerToolControlApi<E = never> {
+  readonly tool: {
+    readonly list: ServerToolControlToolListOperation<E>
+    readonly execute: ServerToolControlToolExecuteOperation<E>
+  }
+}
+
 export type CommandListInput = { readonly location?: { readonly directory?: string | undefined } | undefined }
 export type CommandListOutput = { readonly location: Location.PublicRef; readonly data: ReadonlyArray<Command.Info> }
 export type CommandListOperation<E = never> = (input?: CommandListInput) => Effect.Effect<CommandListOutput, E>
@@ -2279,6 +2320,7 @@ export interface AppApi<E = never> {
   readonly form: FormApi<E>
   readonly permission: PermissionApi<E>
   readonly file: FileApi<E>
+  readonly "server.toolControl": ServerToolControlApi<E>
   readonly command: CommandApi<E>
   readonly skill: SkillApi<E>
   readonly rpc: RpcApi<E>

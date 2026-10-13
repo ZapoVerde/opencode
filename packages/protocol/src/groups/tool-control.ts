@@ -1,7 +1,7 @@
 import { Location } from "@opencode/schema/location"
 import { Session } from "@opencode/schema/session"
 import { Schema } from "effect"
-import { HttpApiEndpoint, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
+import { HttpApiEndpoint, HttpApiGroup, OpenApi } from "effect/http-api"
 import { LocationQuery, locationQueryOpenApi } from "./location.js"
 import { UnknownError } from "../errors.js"
 

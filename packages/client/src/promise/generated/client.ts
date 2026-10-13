@@ -185,6 +185,10 @@ import type {
   FileFindOutput,
   FileWriteInput,
   FileWriteOutput,
+  ServerToolControlToolListInput,
+  ServerToolControlToolListOutput,
+  ServerToolControlToolExecuteInput,
+  ServerToolControlToolExecuteOutput,
   CommandListInput,
   CommandListOutput,
   SkillListInput,
@@ -1657,6 +1661,35 @@ export function make(options: ClientOptions) {
           },
           requestOptions,
         ),
+    },
+    "server.toolControl": {
+      tool: {
+        list: (input?: ServerToolControlToolListInput, requestOptions?: RequestOptions) =>
+          request<ServerToolControlToolListOutput>(
+            {
+              method: "GET",
+              path: `/api/tool`,
+              query: { location: input?.["location"] },
+              successStatus: 200,
+              declaredStatuses: [400, 401, 404],
+              empty: false,
+            },
+            requestOptions,
+          ),
+        execute: (input: ServerToolControlToolExecuteInput, requestOptions?: RequestOptions) =>
+          request<ServerToolControlToolExecuteOutput>(
+            {
+              method: "POST",
+              path: `/api/tool/execute`,
+              query: { location: input["location"] },
+              body: { sessionID: input["sessionID"], tool: input["tool"], input: input["input"] },
+              successStatus: 200,
+              declaredStatuses: [400, 401, 404, 500],
+              empty: false,
+            },
+            requestOptions,
+          ),
+      },
     },
     command: {
       list: (input?: CommandListInput, requestOptions?: RequestOptions) =>

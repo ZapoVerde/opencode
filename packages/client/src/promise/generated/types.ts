@@ -6337,6 +6337,27 @@ export type FileWriteInput = {
 
 export type FileWriteOutput = { location: LocationPublicRef; data: FileSystemWrite }
 
+export type ServerToolControlToolListInput = {
+  readonly location?: { readonly location?: { readonly directory?: string | undefined } | undefined }["location"]
+}
+
+export type ServerToolControlToolListOutput = {
+  location: LocationPublicRef
+  data: Array<{ name: string; description: string; inputSchema: any; outputSchema?: any | undefined }>
+}
+
+export type ServerToolControlToolExecuteInput = {
+  readonly location?: { readonly location?: { readonly directory?: string | undefined } | undefined }["location"]
+  readonly sessionID: { readonly sessionID: string; readonly tool: string; readonly input: unknown }["sessionID"]
+  readonly tool: { readonly sessionID: string; readonly tool: string; readonly input: unknown }["tool"]
+  readonly input: { readonly sessionID: string; readonly tool: string; readonly input: unknown }["input"]
+}
+
+export type ServerToolControlToolExecuteOutput = {
+  location: LocationPublicRef
+  data: { output?: any | undefined; content: Array<any>; metadata?: { [x: string]: any } | undefined }
+}
+
 export type CommandListInput = {
   readonly location?: { readonly location?: { readonly directory?: string | undefined } | undefined }["location"]
 }

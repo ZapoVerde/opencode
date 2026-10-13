@@ -187,6 +187,10 @@ import type {
   FileListOutput,
   FileFindInput,
   FileFindOutput,
+  ServerToolControlToolListInput,
+  ServerToolControlToolListOutput,
+  ServerToolControlToolExecuteInput,
+  ServerToolControlToolExecuteOutput,
   CommandListInput,
   CommandListOutput,
   SkillListInput,
@@ -1211,6 +1215,25 @@ const EndpointFileFind = (raw: RawClient["server.fs"]) => (input: FileFindInput)
 
 const adaptGroupFile = (raw: RawClient["server.fs"]) => ({ list: EndpointFileList(raw), find: EndpointFileFind(raw) })
 
+const EndpointServerToolControlToolList =
+  (raw: RawClient["server.toolControl"]) => (input?: ServerToolControlToolListInput) =>
+    preserveEffect<ServerToolControlToolListOutput>()(
+      raw["toolControl.list"]({ query: { location: input?.["location"] } }).pipe(Effect.mapError(mapClientError)),
+    )
+
+const EndpointServerToolControlToolExecute =
+  (raw: RawClient["server.toolControl"]) => (input: ServerToolControlToolExecuteInput) =>
+    preserveEffect<ServerToolControlToolExecuteOutput>()(
+      raw["toolControl.execute"]({
+        query: { location: input["location"] },
+        payload: { sessionID: input["sessionID"], tool: input["tool"], input: input["input"] },
+      }).pipe(Effect.mapError(mapClientError)),
+    )
+
+const adaptGroupServerToolControl = (raw: RawClient["server.toolControl"]) => ({
+  tool: { list: EndpointServerToolControlToolList(raw), execute: EndpointServerToolControlToolExecute(raw) },
+})
+
 const EndpointCommandList = (raw: RawClient["server.command"]) => (input?: CommandListInput) =>
   preserveEffect<CommandListOutput>()(
     raw["command.list"]({ query: { location: input?.["location"] } }).pipe(Effect.mapError(mapClientError)),
@@ -1621,6 +1644,7 @@ const adaptClient = (raw: RawClient) => ({
   form: adaptGroupForm(raw["server.form"]),
   permission: adaptGroupPermission(raw["server.permission"]),
   file: adaptGroupFile(raw["server.fs"]),
+  "server.toolControl": adaptGroupServerToolControl(raw["server.toolControl"]),
   command: adaptGroupCommand(raw["server.command"]),
   skill: adaptGroupSkill(raw["server.skill"]),
   rpc: adaptGroupRpc(raw["server.rpc"]),
