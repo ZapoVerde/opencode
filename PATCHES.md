@@ -58,6 +58,18 @@ Upstream still does not address any active patch: there is no native tool-contro
 - **Verification:** With those environment values, `opencode2 run --standalone --model opencode/nemotron-3.5-lightning-free` used the existing authenticated Console credential and returned `OK`; the user subsequently confirmed Muse Spark worked in the running OC2 app.
 - **When updating:** Keep the advertised version aligned with the actual source package and channel; do not hard-code a different release identity. Check whether upstream has changed source-run metadata defaults or the Zen free-tier client check, and retest a real free-model request before carrying this patch forward.
 
+#### Designer orchestration agent
+
+- **Status:** Applied
+- **Patch branch:** `feat/designer-agent`
+- **Upstream base:** `upstream/v2` / `4617210822`
+- **Patch commit:** `6e8dea91f72646f285d10952336a51ef4dbead98`
+- **Files:** `packages/core/src/plugin/designer.ts`, `packages/core/src/plugin/internal.ts`, `packages/core/test/plugin/designer.test.ts`
+- **Problem:** No built-in conversational design/orchestration agent. A config-defined agent can only replace the base system prompt via `system`, which also suppresses provider-specific prompt selection; it cannot append to the shared harness prompt, so this cannot be achieved through project configuration alone.
+- **Fix:** Register a primary `designer` agent and inject its instructions as an extra `SystemPart` on the `context` hook, only when the selected agent is `designer`, so the shared harness and provider system prompts stay intact. Permissions remain permissive; the "delegate source changes" restriction lives in the prompt rather than in the permission set.
+- **Verification:** From `packages/core`, `bun test test/plugin/designer.test.ts` passes 5/5 and `bun typecheck` passes. A server run from this tree lists `designer` as a primary, non-hidden agent via `GET /api/agent`.
+- **When updating:** Check whether upstream ships a built-in design/orchestration agent, or a supported way for an agent to append to (rather than replace) the base system prompt. If so, retire this patch.
+
 Before carrying any OC1 patch forward, verify the required behavior against this exact V2 base. In particular, test OpenAI OAuth availability for base `gpt-5.6` / Luna. If V2 already supports it, do not recreate the OC1 patch.
 
 ## Patch entry template
