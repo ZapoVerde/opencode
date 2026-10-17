@@ -70,6 +70,18 @@ Upstream still does not address any active patch: there is no native tool-contro
 - **Verification:** From `packages/core`, `bun test test/plugin/designer.test.ts` passes 5/5 and `bun typecheck` passes. A server run from this tree lists `designer` as a primary, non-hidden agent via `GET /api/agent`.
 - **When updating:** Check whether upstream ships a built-in design/orchestration agent, or a supported way for an agent to append to (rather than replace) the base system prompt. If so, retire this patch.
 
+#### Mobile composer: return key inserts a newline
+
+- **Status:** Applied
+- **Patch branch:** `fix/mobile-enter-newline-v2`
+- **Upstream base:** `upstream/v2` / `4617210822`
+- **Patch commit:** `339f3ee16d`
+- **Files:** `packages/app/src/composer/editor/editor.tsx`
+- **Problem:** The composer's bare Enter submits the prompt on every device. A touch soft keyboard has no usable Shift+Enter, so a phone or tablet user cannot write a multi-line prompt before sending.
+- **Fix:** Read `(pointer: coarse)` in `ComposerEditor`. When the primary pointer is coarse and the composer is in normal mode, a bare Enter is left to the browser so it inserts a newline; the composer's send button submits, and `Mod+Enter` still queues. Shell mode and fine-pointer devices are unchanged, so a physical keyboard attached to a touch device keeps Enter-to-send.
+- **Verification:** From `packages/app`, `bun typecheck` passes and the composer unit tests pass (75 across 12 files) on both the patch branch and the integration branch.
+- **When updating:** Check upstream composer key handling in `packages/app/src/composer/editor/editor.tsx` (the `onKeyDown` Enter branch) and whether upstream adds its own touch/keyboard mode. Retire this patch if upstream stops submitting on a bare Enter for coarse-pointer devices.
+
 Before carrying any OC1 patch forward, verify the required behavior against this exact V2 base. In particular, test OpenAI OAuth availability for base `gpt-5.6` / Luna. If V2 already supports it, do not recreate the OC1 patch.
 
 ## Patch entry template
