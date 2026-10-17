@@ -95,6 +95,8 @@ export function ComposerEditor(props: ComposerEditorProps) {
   const i18n = useI18n()
   const state = props.controller.state
   const view = props.controller.view
+  // Touch devices have no Shift+Enter, so their return key inserts a newline and the send button submits.
+  const touch = createMediaQuery("(pointer: coarse)")
   let editor: HTMLDivElement | undefined
   let viewport: HTMLDivElement | undefined
   let controlsViewport!: HTMLDivElement
@@ -265,6 +267,9 @@ export function ComposerEditor(props: ComposerEditorProps) {
               }
 
               if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+                // On touch devices a bare Enter inserts a newline; the send button submits, and Mod+Enter still queues.
+                if (touch() && !mod && state.mode === "normal") return
+
                 event.preventDefault()
 
                 if (event.repeat) return
