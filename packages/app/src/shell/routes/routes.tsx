@@ -64,6 +64,7 @@ export function AppRoutes() {
         )}
       />
       <Route path="/new-session" component={DraftRoute} />
+      <Route path="*" component={Home} />
     </Route>
   )
 }
