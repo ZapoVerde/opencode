@@ -82,6 +82,18 @@ Upstream still does not address any active patch: there is no native tool-contro
 - **Verification:** From `packages/app`, `bun typecheck` passes and the composer unit tests pass (75 across 12 files) on both the patch branch and the integration branch.
 - **When updating:** Check upstream composer key handling in `packages/app/src/composer/editor/editor.tsx` (the `onKeyDown` Enter branch) and whether upstream adds its own touch/keyboard mode. Retire this patch if upstream stops submitting on a bare Enter for coarse-pointer devices.
 
+#### Unknown routes fall back to Home
+
+- **Status:** Applied
+- **Patch branch:** `fix/unknown-route-fallback-v2`
+- **Upstream base:** `upstream/v2` / `4617210822`
+- **Patch commit:** `267b93be44`
+- **Files:** `packages/app/src/shell/state/layout.tsx`, `packages/app/src/shell/routes/routes.tsx`, `packages/app/src/shell/state/layout.test.ts`
+- **Problem:** `currentRoute` threw `Unrecognised route!` for any path outside its whitelist, and it runs during provider init in the Solid Router root, so any URL the SPA shell is served on that is not a known route (for example the Cloudflare Access callback `/cdn-cgi/access/authorized`, or any stale or unknown path) crashed the whole app with the "Something went wrong" error page before it could render anything.
+- **Fix:** `currentRoute` returns the `home` route type instead of throwing, and `AppRoutes` gains a `path="*"` catch-all that renders `Home`, so unknown paths fall back to the Home screen and keep the URL unchanged.
+- **Verification:** From `packages/app`, `bun typecheck` passes and `bun test --conditions=solid ./src/shell/state/layout.test.ts` passes 11/11, including the new fallback case which fails against the unpatched code. `bun run build` succeeds and `bun run check` from the repository root passes. Re-verified after cherry-picking onto `opencode2-v2-patched`.
+- **When updating:** Check whether upstream stops throwing in `currentRoute` or adds its own catch-all or 404 route in `packages/app/src/shell/routes/routes.tsx`. Retire this patch if upstream handles unknown paths without crashing.
+
 Before carrying any OC1 patch forward, verify the required behavior against this exact V2 base. In particular, test OpenAI OAuth availability for base `gpt-5.6` / Luna. If V2 already supports it, do not recreate the OC1 patch.
 
 ## Patch entry template
