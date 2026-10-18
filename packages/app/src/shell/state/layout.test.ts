@@ -10,6 +10,10 @@ test.each(["settings", "connect"] as const)("%s has its own layout route", (type
   expect(currentRoute(`/${type}`, "")).toEqual({ type })
 })
 
+test("falls back to home for unrecognised paths", () => {
+  expect(currentRoute("/cdn-cgi/access/authorized", "?nonce=x&state=y")).toEqual({ type: "home" })
+})
+
 describe("layout persistence", () => {
   const schema = Persistence.withInitial(layoutPersistence, initialLayout(ServerConnection.Key.make("local")))
   const decode = Schema.decodeUnknownSync(schema)
