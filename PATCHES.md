@@ -94,6 +94,18 @@ Upstream still does not address any active patch: there is no native tool-contro
 - **Verification:** From `packages/app`, `bun typecheck` passes and `bun test --conditions=solid ./src/shell/state/layout.test.ts` passes 11/11, including the new fallback case which fails against the unpatched code. `bun run build` succeeds and `bun run check` from the repository root passes. Re-verified after cherry-picking onto `opencode2-v2-patched`.
 - **When updating:** Check whether upstream stops throwing in `currentRoute` or adds its own catch-all or 404 route in `packages/app/src/shell/routes/routes.tsx`. Retire this patch if upstream handles unknown paths without crashing.
 
+#### Config-defined models keep their place in the picker
+
+- **Status:** Applied
+- **Patch branch:** `fix/custom-model-release-time-v2`
+- **Upstream base:** `upstream/v2` / `4617210822`
+- **Patch commit:** `b5dea8e1ea`
+- **Files:** `packages/core/src/config/plugin/provider.ts`
+- **Problem:** The V2 config schema has no release date, so models from a config-defined provider keep `time.released: 0`. The app's latest-only visibility filter reads that as 1970 and hides every model from the picker, even though the provider and its catalog loaded.
+- **Fix:** When a config-defined model has no catalog release time, default `model.time.released` to `Date.now()`. Catalog providers keep their real dates.
+- **Verification:** From `packages/core`, `bun run typecheck` passes; a custom provider (the WorkBuddy gateway) appears in `GET /api/model` with a current release time and its 22 models remain visible in the picker after a reload.
+- **When updating:** Check whether upstream adds a release-date field to the V2 provider config or stops hiding models without one. Retire this patch if either lands.
+
 Before carrying any OC1 patch forward, verify the required behavior against this exact V2 base. In particular, test OpenAI OAuth availability for base `gpt-5.6` / Luna. If V2 already supports it, do not recreate the OC1 patch.
 
 ## Patch entry template
