@@ -109,6 +109,9 @@ export const Plugin = define({
               if (item.settings?.baseURL !== undefined && model.settings) delete model.settings.baseURL
             }
             if (config.family !== undefined) model.family = config.family
+            // Custom providers have no catalog release date; without one the
+            // app's latest-only visibility treats the model as 1970 and hides it.
+            if (!model.time.released) model.time.released = Date.now()
             if (config.name !== undefined) model.name = config.name
             if (config.modelID !== undefined) model.modelID = config.modelID
             if (config.compatibility !== undefined)
