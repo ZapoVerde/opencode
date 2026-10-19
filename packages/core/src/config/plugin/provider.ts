@@ -61,6 +61,10 @@ export const Plugin = define({
             for (const [id, config] of Object.entries(item.models ?? {})) {
               catalog.model.update(providerID, id, (model) => {
                 if (config.family !== undefined) model.family = config.family
+                if (config.release_date !== undefined) {
+                  const released = Date.parse(config.release_date)
+                  model.time.released = Number.isFinite(released) ? released : 0
+                }
                 if (config.name !== undefined) model.name = config.name
                 if (config.api !== undefined) model.api = { ...model.api, ...config.api }
                 if (config.capabilities !== undefined) {

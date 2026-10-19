@@ -216,6 +216,7 @@ function migrateModel(info: typeof ConfigProviderV1.Model.Type, packageName?: st
       : undefined
   return {
     family: info.family,
+    release_date: info.release_date,
     name: info.name,
     api: info.provider?.npm
       ? {

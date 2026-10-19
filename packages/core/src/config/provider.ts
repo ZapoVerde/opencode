@@ -46,6 +46,7 @@ const ModelApi = Schema.Union([
 
 class Model extends Schema.Class<Model>("ConfigV2.Model")({
   family: ModelV2.Family.pipe(Schema.optional),
+  release_date: Schema.String.pipe(Schema.optional),
   name: Schema.String.pipe(Schema.optional),
   api: ModelApi.pipe(Schema.optional),
   capabilities: ModelV2.Capabilities.pipe(Schema.optional),
