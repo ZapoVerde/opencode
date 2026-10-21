@@ -49,6 +49,7 @@ for (const position of ["top", "bottom"] as const) {
       const titlebar = page.locator('[data-slot="titlebar-v2"]')
       await expect(titlebar).toHaveCSS("padding-top", "8px")
       await expect(titlebar).toHaveCSS("height", "36px")
+      await expect(tabs).toHaveCSS("height", "44px")
     }
 
     await expect
@@ -80,6 +81,7 @@ for (const position of ["top", "bottom"] as const) {
     await expect(drawer).toHaveAttribute("data-open", "")
     await expect(drawer).not.toHaveAttribute("data-transitioning")
     await expect(drawer.getByRole("button", { name: "Settings", exact: true })).toBeInViewport()
+    await expect(drawer.getByRole("button", { name: "Settings", exact: true })).toHaveCSS("height", "44px")
     await drawer.getByRole("button", { name: "Settings", exact: true }).click()
     await expect(page.getByTestId("settings-screen")).toBeVisible()
     await page.getByRole("button", { name: "Back to app", exact: true }).click()
