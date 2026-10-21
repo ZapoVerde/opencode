@@ -84,6 +84,18 @@ Upstream still does not address any active patch: there is no native tool-contro
 - **Verification:** From `packages/app`, `bun typecheck` passes and the composer unit tests pass (75 across 12 files) on both the patch branch and the integration branch. Re-verified on the 2026-10-21 `upstream/dev` merge: `packages/app` typecheck passes and the composer plus unknown-route suites pass 88/88 across 13 files.
 - **When updating:** Check upstream composer key handling in `packages/app/src/composer/editor/editor.tsx` (the `onKeyDown` Enter branch) and whether upstream adds its own touch/keyboard mode. Retire this patch if upstream stops submitting on a bare Enter for coarse-pointer devices.
 
+#### Mobile web: keep the composer above the keyboard and enlarge navigation targets
+
+- **Status:** Applied
+- **Patch branch:** `feat/mobile-web-polish-v2`
+- **Upstream base:** `upstream/dev` / `adcda1b84f`
+- **Patch commit:** `8ba9c599e1`
+- **Files:** `packages/app/src/runtime/platform/keyboard.ts`, `packages/app/src/index.css`, `packages/app/src/runtime/extension/mobile.tsx`, `packages/app/src/shell/titlebar/titlebar.tsx`, `packages/app/e2e/regression/mobile-composer-submit-focus.spec.ts`, `packages/app/e2e/regression/mobile-session.spec.ts`
+- **Problem:** Browsers that resize only the visual viewport when the software keyboard opens, including Android Firefox, leave the layout at its full `dvh` height, so the composer and bottom titlebar sit under the keyboard. The mobile view switcher is 36px high and the tab drawer's New session, Home, Settings, and Help rows are 28px high, below a comfortable touch target.
+- **Fix:** `KeyboardInsets` publishes `data-keyboard` and `--visual-viewport-height` from `visualViewport.height` while an editable element is focused and the visible area shrinks by more than a browser-chrome-sized inset, ignoring pinch zoom. `index.css` sizes `#root` to that height only while the attribute is present. The mobile view switcher and the four drawer actions grow to 44px.
+- **Verification:** From `packages/app`, `bun typecheck` passes and `bun typecheck:e2e` reports only the pre-existing `timeline-stream.spec.ts` errors. `mobile-composer-submit-focus.spec.ts` and `mobile-session.spec.ts` pass 13/13, including a visual-viewport-only keyboard emulation and the 44px touch-target assertions. Root `bun run check` passes 34/34. Re-verified after cherry-picking onto `opencode2-v2-patched`.
+- **When updating:** Check whether upstream sizes the web app against `visualViewport` when the keyboard opens and whether the mobile view switcher and drawer actions already meet a 44px target. Retire this patch if both are handled upstream.
+
 #### Unknown routes fall back to Home
 
 - **Status:** Applied
