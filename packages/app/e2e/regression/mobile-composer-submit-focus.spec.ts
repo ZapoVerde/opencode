@@ -2,7 +2,14 @@ import { expect, test, type Page } from "@playwright/test"
 import { fixture, installStressSessionTabs } from "../utils/session-fixture"
 import { sessionHref } from "../utils/app"
 import { openWithDirection } from "../utils/direction"
+import { openDraft } from "../utils/workspace"
 import { mockOpenCodeServer } from "../utils/mock-server"
+
+declare global {
+  interface Window {
+    showKeyboard: (height: number) => void
+  }
+}
 
 for (const { width, direction } of [
   { width: 390, direction: "ltr" },
@@ -60,6 +67,27 @@ test.describe("touch submission", () => {
     await expect(editor).toBeEmpty()
     await expect(editor).not.toBeFocused()
   })
+
+  test("keeps the composer above a keyboard that only resizes the visual viewport", async ({ page }) => {
+    await installVisualKeyboard(page)
+    const draft = await openDraft(page, { name: "Keyboard" })
+
+    await draft.editor.focus()
+    await page.evaluate(() => window.showKeyboard(420))
+
+    await expect(page.locator("html")).toHaveAttribute("data-keyboard")
+    await expect
+      .poll(() => page.locator("#root").evaluate((element) => element.getBoundingClientRect().height))
+      .toBe(420)
+    await expect
+      .poll(() =>
+        page.locator('[data-component="composer"]').evaluate((element) => element.getBoundingClientRect().bottom),
+      )
+      .toBeLessThanOrEqual(420)
+
+    await page.evaluate(() => window.showKeyboard(844))
+    await expect(page.locator("html")).not.toHaveAttribute("data-keyboard")
+  })
 })
 
 async function openSubmitSession(page: Page, width: number, direction: "ltr" | "rtl") {
@@ -76,4 +104,40 @@ async function openSubmitSession(page: Page, width: number, direction: "ltr" | "
     localStorage.setItem("settings.v3", JSON.stringify({ general: { mobileTitlebarPosition: "bottom" } }))
   })
   await openWithDirection(page, sessionHref(fixture.targetID), direction)
+}
+
+// The viewport metadata asks browsers to resize the layout viewport for the software keyboard, but some resize only
+// the visual viewport. Emulate one: the app must keep its own height in step with the visible area.
+async function installVisualKeyboard(page: Page) {
+  await page.addInitScript(() => {
+    const listeners = new Set<(event: Event) => void>()
+
+    const viewport = {
+      width: 390,
+      height: 844,
+      offsetTop: 0,
+      offsetLeft: 0,
+      pageTop: 0,
+      pageLeft: 0,
+      scale: 1,
+      addEventListener: (type: string, listener: (event: Event) => void) => {
+        if (type === "resize") listeners.add(listener)
+      },
+      removeEventListener: (type: string, listener: (event: Event) => void) => {
+        if (type === "resize") listeners.delete(listener)
+      },
+      dispatchEvent: (event: Event) => {
+        listeners.forEach((listener) => listener(event))
+
+        return true
+      },
+    }
+
+    Object.defineProperty(window, "visualViewport", { configurable: true, value: viewport })
+
+    window.showKeyboard = (height) => {
+      viewport.height = height
+      viewport.dispatchEvent(new Event("resize"))
+    }
+  })
 }

@@ -94,7 +94,7 @@ export function MobileViewTabs(props: {
       data-slot="session-mobile-view-navigation"
     >
       <Tabs value={tab()} variant="line" class="!h-auto min-w-0 flex-1" data-slot="session-mobile-view-tabs">
-        <Tabs.List aria-label={language.t("session.view.select")} class="!h-9 !gap-0 !px-0 before:!hidden">
+        <Tabs.List aria-label={language.t("session.view.select")} class="!h-11 !gap-0 !px-0 before:!hidden">
           <Tabs.Trigger
             value="session"
             class="min-w-0 flex-1"

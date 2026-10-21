@@ -37,6 +37,11 @@
   height: 100vh;
 }
 
+/* Browsers that resize only the visual viewport would otherwise leave the composer under the software keyboard. */
+html[data-keyboard] #root {
+  height: var(--visual-viewport-height);
+}
+
 @layer components {
   [data-slot="session-chat-panel"][data-scrollbar-hidden="true"]
     [data-slot="session-timeline-scroll"]
