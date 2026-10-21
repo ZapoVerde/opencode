@@ -109,6 +109,8 @@ import type {
   ModelDefaultOutput,
   GenerateTextInput,
   GenerateTextOutput,
+  VoiceSessionInput,
+  VoiceSessionOutput,
   ProviderListInput,
   ProviderListOutput,
   ProviderGetInput,
@@ -158,6 +160,7 @@ import type {
   CredentialActivateOutput,
   CredentialRemoveInput,
   CredentialRemoveOutput,
+  ProjectListInput,
   ProjectListOutput,
   ProjectUpdateInput,
   ProjectUpdateOutput,
@@ -167,6 +170,8 @@ import type {
   PermissionRequestListOutput,
   PermissionSavedListInput,
   PermissionSavedListOutput,
+  PermissionSavedUpdateInput,
+  PermissionSavedUpdateOutput,
   PermissionSavedRemoveInput,
   PermissionSavedRemoveOutput,
   PermissionCreateInput,
@@ -549,6 +554,7 @@ export function make(options: ClientOptions) {
               order: input?.["order"],
               search: input?.["search"],
               parentID: input?.["parentID"],
+              archived: input?.["archived"],
               directory: input?.["directory"],
               project: input?.["project"],
               subpath: input?.["subpath"],
@@ -697,7 +703,12 @@ export function make(options: ClientOptions) {
           {
             method: "PATCH",
             path: `/api/session/${encodeURIComponent(input.sessionID)}`,
-            body: { title: input["title"], metadata: input["metadata"], permissions: input["permissions"] },
+            body: {
+              title: input["title"],
+              metadata: input["metadata"],
+              permissions: input["permissions"],
+              archived: input["archived"],
+            },
             successStatus: 204,
             declaredStatuses: [400, 401, 404],
             empty: true,
@@ -1154,6 +1165,20 @@ export function make(options: ClientOptions) {
           requestOptions,
         ).then((value) => value.data),
     },
+    voice: {
+      session: (input: VoiceSessionInput, requestOptions?: RequestOptions) =>
+        request<{ readonly data: VoiceSessionOutput }>(
+          {
+            method: "POST",
+            path: `/api/experimental/voice/session`,
+            body: { model: input["model"], session: input["session"], transport: input["transport"] },
+            successStatus: 200,
+            declaredStatuses: [400, 401, 404, 503],
+            empty: false,
+          },
+          requestOptions,
+        ).then((value) => value.data),
+    },
     provider: {
       list: (input?: ProviderListInput, requestOptions?: RequestOptions) =>
         request<ProviderListOutput>(
@@ -1477,9 +1502,16 @@ export function make(options: ClientOptions) {
         ),
     },
     project: {
-      list: (requestOptions?: RequestOptions) =>
+      list: (input?: ProjectListInput, requestOptions?: RequestOptions) =>
         request<ProjectListOutput>(
-          { method: "GET", path: `/api/project`, successStatus: 200, declaredStatuses: [400, 401, 404], empty: false },
+          {
+            method: "GET",
+            path: `/api/project`,
+            query: { archived: input?.["archived"] },
+            successStatus: 200,
+            declaredStatuses: [400, 401, 404],
+            empty: false,
+          },
           requestOptions,
         ),
       update: (input: ProjectUpdateInput, requestOptions?: RequestOptions) =>
@@ -1538,6 +1570,18 @@ export function make(options: ClientOptions) {
               query: { projectID: input?.["projectID"] },
               successStatus: 200,
               declaredStatuses: [400, 401, 404],
+              empty: false,
+            },
+            requestOptions,
+          ).then((value) => value.data),
+        update: (input: PermissionSavedUpdateInput, requestOptions?: RequestOptions) =>
+          request<{ readonly data: PermissionSavedUpdateOutput }>(
+            {
+              method: "PATCH",
+              path: `/api/permission/saved/${encodeURIComponent(input.id)}`,
+              body: { action: input["action"], resource: input["resource"] },
+              successStatus: 200,
+              declaredStatuses: [400, 401, 404, 409],
               empty: false,
             },
             requestOptions,
