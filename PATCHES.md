@@ -120,6 +120,18 @@ Upstream still does not address any active patch: there is no native tool-contro
 - **Verification:** From `packages/core`, `bun run typecheck` passes; a custom provider (the WorkBuddy gateway) appears in `GET /api/model` with a current release time and its 22 models remain visible in the picker after a reload. Re-verified on the 2026-10-21 `upstream/dev` merge: this was the only merge conflict; the local default was kept alongside upstream's new `releaseDate` handling and `config.name` truthiness check, and `packages/core` typecheck passes.
 - **When updating:** Check whether upstream adds a release-date field to the V2 provider config or stops hiding models without one. Upstream added an opt-in `releaseDate` on 2026-10-20, but an omitted value still leaves `released: 0`, and the app's six-month "latest" filter still hides those models, so this default remains necessary. Retire the patch if upstream defaults missing release times or stops filtering on them.
 
+#### Central screenshot capture workspace
+
+- **Status:** Applied
+- **Patch branch:** `feat/screenshots-harness-v2`
+- **Upstream base:** `upstream/dev` / `adcda1b84f`
+- **Patch commit:** `39eaa29a80`
+- **Files:** `packages/app-harness/**` (new), `packages/screenshots/**` (new), `packages/app/e2e/utils/*` (23 harness files moved out), `packages/app/e2e/**` (import rewrites), `packages/app/test-browser/prompt-motion.test.ts`, `packages/app/package.json`, `packages/storybook/package.json`, `.oxlintrc.json`, `script/lint-changed.ts`, `bun.lock`, `packages/app/e2e/AGENTS.md`, `.opencode/skills/app-e2e-tests/SKILL.md`
+- **Problem:** The Playwright mock harness is owned by `packages/app/e2e/utils`, so screenshot tooling would be app-owned and buried in test code. There is no central way to capture the real UI before a production build.
+- **Fix:** Extract the reusable harness into `@opencode/app-harness`; add `@opencode/screenshots` with `bun run shots` and `bun run shots:story`. Scenes render the real app on the Vite dev server against the in-memory mock backend, and story capture mounts Storybook.
+- **Verification:** 100% renames for the moved harness. On the patch branch and the integration branch, root `bun run typecheck` passes 36/36 and `bun run lint` reports 0 errors. `bun run shots` captures `session-dark`, `session-mobile`, `home`, and `settings-light`; `SHOTS_STORY_ID=current-session-error-card--provider-errors bun run shots:story` captures a story. `packages/app` `typecheck:e2e` still reports only its pre-existing 9 errors.
+- **When updating:** After an upstream merge, check for new or changed files under `packages/app/e2e/utils` and rerun the harness import rewrite. Retire this deviation if upstream moves the harness out of the app package or ships equivalent central screenshot tooling.
+
 Before carrying any OC1 patch forward, verify the required behavior against this exact V2 base. In particular, test OpenAI OAuth availability for base `gpt-5.6` / Luna. If V2 already supports it, do not recreate the OC1 patch.
 
 ## Patch entry template
