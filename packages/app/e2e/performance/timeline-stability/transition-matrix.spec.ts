@@ -5,7 +5,7 @@ import {
   startVisualProbe,
   stopVisualProbe,
   visualPlan,
-} from "../../utils/visual-stability"
+} from "@opencode/app-harness/visual-stability"
 import {
   assistantMessage,
   completedAssistantInfo,
@@ -19,7 +19,7 @@ import {
   textPart,
   toolPart,
   userMessage,
-} from "../../utils/timeline"
+} from "@opencode/app-harness/timeline"
 
 test("streams text through growth, canonical replacement, and completion", async ({ page }, testInfo) => {
   const textID = "prt_text_reconcile"

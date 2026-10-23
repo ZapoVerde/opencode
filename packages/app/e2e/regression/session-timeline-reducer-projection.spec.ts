@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test"
-import { assistantMessage, setupTimeline, toolPart, userMessage } from "../utils/timeline"
+import { assistantMessage, setupTimeline, toolPart, userMessage } from "@opencode/app-harness/timeline"
 
 test("keeps failed search calls and their error cards inside the collapsed stack", async ({ page }) => {
   const parts = [

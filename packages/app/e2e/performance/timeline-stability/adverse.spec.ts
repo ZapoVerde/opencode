@@ -5,7 +5,7 @@ import {
   startVisualProbe,
   stopVisualProbe,
   visualPlan,
-} from "../../utils/visual-stability"
+} from "@opencode/app-harness/visual-stability"
 import {
   assistantMessage,
   partUpdated,
@@ -17,7 +17,7 @@ import {
   userMessage,
   waitForVisualSettle,
   type TimelineMessage,
-} from "../../utils/timeline"
+} from "@opencode/app-harness/timeline"
 
 test.describe("timeline adverse visual stability", () => {
   test("does not pull a scrolled-away user while an active shell grows", async ({ page }, testInfo) => {

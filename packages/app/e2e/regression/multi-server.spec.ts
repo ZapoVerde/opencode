@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test"
-import { REMOTE_SERVER, SERVER, expectPath, project, seed, session, sessionHref, type TabSeed } from "../utils/app"
-import { mockServers, type MockServerConfig } from "../utils/mock-server"
-import { expectSessionTitle } from "../utils/waits"
+import { REMOTE_SERVER, SERVER, expectPath, project, seed, session, sessionHref, type TabSeed } from "@opencode/app-harness/app"
+import { mockServers, type MockServerConfig } from "@opencode/app-harness/mock-server"
+import { expectSessionTitle } from "@opencode/app-harness/waits"
 
 const directoryA = "C:/server-a"
 

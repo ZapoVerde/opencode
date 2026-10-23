@@ -6,7 +6,7 @@ import {
   startVisualProbe,
   stopVisualProbe,
   visualPlan,
-} from "../../utils/visual-stability"
+} from "@opencode/app-harness/visual-stability"
 import {
   assistantMessage,
   renderedPartID,
@@ -16,7 +16,7 @@ import {
   toolPart,
   userMessage,
   waitForVisualSettle,
-} from "../../utils/timeline"
+} from "@opencode/app-harness/timeline"
 
 test("expands and collapses a long completed shell without overlap", async ({ page }, testInfo) => {
   const shellID = "prt_interaction_01_shell"

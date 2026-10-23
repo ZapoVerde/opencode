@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test"
-import { NO_PROVIDER, T0, expectPath, provider, sessionHref } from "../utils/app"
-import { openDraft, openSession } from "../utils/workspace"
+import { NO_PROVIDER, T0, expectPath, provider, sessionHref } from "@opencode/app-harness/app"
+import { openDraft, openSession } from "@opencode/app-harness/workspace"
 
 test.use({ permissions: ["clipboard-read", "clipboard-write"] })
 

@@ -26,6 +26,7 @@
     {
       "files": [
         "packages/app/**",
+        "packages/app-harness/**",
         "packages/desktop/**",
         "packages/gui-extensions/**",
         "packages/ui/**",

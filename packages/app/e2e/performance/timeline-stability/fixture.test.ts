@@ -7,7 +7,7 @@ import {
   validateTimelineEvent,
   validateTimelineMessages,
   type PartSeed,
-} from "../../utils/timeline"
+} from "@opencode/app-harness/timeline"
 
 describe("timeline fixture validation", () => {
   test("accepts a valid timeline", () => {

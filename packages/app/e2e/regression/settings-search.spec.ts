@@ -1,9 +1,9 @@
 import { expect, test, type Page } from "@playwright/test"
 import en from "../../src/runtime/i18n/en"
 import { clientSettings } from "../../src/settings/search-catalog"
-import { NO_PROVIDER, REMOTE_SERVER, project, type SeedInput } from "../utils/app"
-import { mockOpenCodeServer } from "../utils/mock-server"
-import { openSettings } from "../utils/workspace"
+import { NO_PROVIDER, REMOTE_SERVER, project, type SeedInput } from "@opencode/app-harness/app"
+import { mockOpenCodeServer } from "@opencode/app-harness/mock-server"
+import { openSettings } from "@opencode/app-harness/workspace"
 
 const directory = "/projects/opencode"
 

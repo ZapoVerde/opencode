@@ -1,4 +1,4 @@
-import { expectSessionTitle } from "../../utils/waits"
+import { expectSessionTitle } from "@opencode/app-harness/waits"
 import { benchmark, expect } from "../benchmark"
 import { measureFirstNavigation } from "./first-navigation-probe"
 import {
@@ -6,8 +6,8 @@ import {
   installStressSessionTabs,
   installTimelineSettings,
   mockStressTimeline,
-} from "../../utils/session-fixture"
-import { draftHref, sessionHref } from "../../utils/app"
+} from "@opencode/app-harness/session-fixture"
+import { draftHref, sessionHref } from "@opencode/app-harness/app"
 import { waitForStableTimeline } from "./session-tab-switch-probe"
 
 const contentSelector = '[data-message-id], [data-component="composer-editor"]'

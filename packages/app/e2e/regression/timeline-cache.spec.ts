@@ -1,10 +1,10 @@
 import { expect, test, type Page } from "@playwright/test"
 import type { SessionMessageInfo } from "@opencode/client/promise"
 import { timelinePresets } from "@opencode/session-ui/timeline/detail"
-import { expected, messages } from "../utils/markdown-sessions"
-import { expectPath, seed, sessionHref, type SeedInput } from "../utils/app"
-import type { MockServerConfig } from "../utils/mock-server"
-import { fixture, installTimelineSettings, mockStressTimeline } from "../utils/session-fixture"
+import { expected, messages } from "@opencode/app-harness/markdown-sessions"
+import { expectPath, seed, sessionHref, type SeedInput } from "@opencode/app-harness/app"
+import type { MockServerConfig } from "@opencode/app-harness/mock-server"
+import { fixture, installTimelineSettings, mockStressTimeline } from "@opencode/app-harness/session-fixture"
 
 test.use({ viewport: { width: 1440, height: 900 }, serviceWorkers: "block" })
 

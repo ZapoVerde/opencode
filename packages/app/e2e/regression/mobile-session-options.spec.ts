@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test"
-import { fixture, mockStressTimeline } from "../utils/session-fixture"
-import { sessionHref } from "../utils/app"
-import { openWithDirection } from "../utils/direction"
+import { fixture, mockStressTimeline } from "@opencode/app-harness/session-fixture"
+import { sessionHref } from "@opencode/app-harness/app"
+import { openWithDirection } from "@opencode/app-harness/direction"
 
 for (const scheme of ["light", "dark"] as const) {
   for (const direction of ["ltr", "rtl"] as const) {

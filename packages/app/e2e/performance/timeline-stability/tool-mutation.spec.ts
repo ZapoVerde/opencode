@@ -5,7 +5,7 @@ import {
   startVisualProbe,
   stopVisualProbe,
   visualPlan,
-} from "../../utils/visual-stability"
+} from "@opencode/app-harness/visual-stability"
 import {
   assistantMessage,
   partUpdated,
@@ -15,7 +15,7 @@ import {
   setupTimeline,
   toolPart,
   userMessage,
-} from "../../utils/timeline"
+} from "@opencode/app-harness/timeline"
 
 test("adds a subagent child-session link without replacing the row", async ({ page }, testInfo) => {
   const taskID = "prt_subagent_link"

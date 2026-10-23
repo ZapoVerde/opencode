@@ -1,4 +1,4 @@
-import { currentSession } from "../../utils/mock-server"
+import { currentSession } from "@opencode/app-harness/mock-server"
 
 export const HOME_INDEX_FIXTURE_VERSION = 1
 

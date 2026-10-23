@@ -1,8 +1,8 @@
 import { base64Encode } from "@opencode/util/encode"
 import { benchmark, benchmarkDiagnostics, expect } from "../benchmark"
-import { mockOpenCodeServer } from "../../utils/mock-server"
-import { expectSessionTitle } from "../../utils/waits"
-import { fixture } from "../../utils/session-fixture"
+import { mockOpenCodeServer } from "@opencode/app-harness/mock-server"
+import { expectSessionTitle } from "@opencode/app-harness/waits"
+import { fixture } from "@opencode/app-harness/session-fixture"
 
 const sessionID = "ses_composer_write_batch"
 

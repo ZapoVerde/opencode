@@ -1,8 +1,8 @@
 import type { SessionMessageAssistant, SessionMessageInfo } from "@opencode/client/promise"
 import { expect, test, type Page } from "@playwright/test"
-import { seed, sessionHref } from "../utils/app"
-import { trackPageErrors } from "../utils/errors"
-import { fixture, installTimelineSettings, mockStressTimeline } from "../utils/session-fixture"
+import { seed, sessionHref } from "@opencode/app-harness/app"
+import { trackPageErrors } from "@opencode/app-harness/errors"
+import { fixture, installTimelineSettings, mockStressTimeline } from "@opencode/app-harness/session-fixture"
 import {
   assistantMessage,
   messageUpdated,
@@ -11,8 +11,8 @@ import {
   status,
   textPart,
   userMessage,
-} from "../utils/timeline"
-import { expectSessionTitle } from "../utils/waits"
+} from "@opencode/app-harness/timeline"
+import { expectSessionTitle } from "@opencode/app-harness/waits"
 
 test.use({ serviceWorkers: "block" })
 

@@ -1,9 +1,9 @@
 import type { CDPSession, Page } from "@playwright/test"
 import { benchmark, expect } from "../benchmark"
-import { mockOpenCodeServer } from "../../utils/mock-server"
-import { APP_READY_TIMEOUT } from "../../utils/waits"
-import { SERVER } from "../../utils/app"
-import { fixture as stress } from "../../utils/session-fixture"
+import { mockOpenCodeServer } from "@opencode/app-harness/mock-server"
+import { APP_READY_TIMEOUT } from "@opencode/app-harness/waits"
+import { SERVER } from "@opencode/app-harness/app"
+import { fixture as stress } from "@opencode/app-harness/session-fixture"
 import { createHomeIndexFixture, type HomeIndexFixture } from "./home-session-index.fixture"
 
 // Home fetches the root-session index on mount. These cases hold the visible

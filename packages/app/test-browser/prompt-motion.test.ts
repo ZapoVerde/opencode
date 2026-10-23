@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { promptMotionIssues } from "../e2e/utils/prompt-motion"
+import { promptMotionIssues } from "@opencode/app-harness/prompt-motion"
 
 // Negative controls for the painted-prompt check in e2e/regression/mobile-timeline-scroll.spec.ts.
 test.each([

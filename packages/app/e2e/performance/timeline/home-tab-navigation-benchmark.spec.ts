@@ -1,13 +1,13 @@
 import { benchmark, expect } from "../benchmark"
-import { expectSessionTitle } from "../../utils/waits"
+import { expectSessionTitle } from "@opencode/app-harness/waits"
 import { measureNavigationMilestones } from "./navigation-milestones"
 import {
   fixture,
   installStressSessionTabs,
   installTimelineSettings,
   mockStressTimeline,
-} from "../../utils/session-fixture"
-import { sessionHref } from "../../utils/app"
+} from "@opencode/app-harness/session-fixture"
+import { sessionHref } from "@opencode/app-harness/app"
 import { waitForStableTimeline } from "./session-tab-switch-probe"
 
 const homeRow = '[data-component="home-session-row"]'

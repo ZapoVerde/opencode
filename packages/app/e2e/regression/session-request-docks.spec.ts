@@ -1,8 +1,8 @@
 import { expect, test, type Page } from "@playwright/test"
-import { SERVER, sessionHref } from "../utils/app"
-import { installSseTransport } from "../utils/sse-transport"
-import { expectSessionTitle } from "../utils/waits"
-import { mockWorkspace, type WorkspaceInput } from "../utils/workspace"
+import { SERVER, sessionHref } from "@opencode/app-harness/app"
+import { installSseTransport } from "@opencode/app-harness/sse-transport"
+import { expectSessionTitle } from "@opencode/app-harness/waits"
+import { mockWorkspace, type WorkspaceInput } from "@opencode/app-harness/workspace"
 
 const directory = "C:/OpenCode/RequestDocks"
 

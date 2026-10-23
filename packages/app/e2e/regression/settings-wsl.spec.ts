@@ -1,8 +1,8 @@
 import { base64Encode } from "@opencode/util/encode"
 import { expect, test } from "@playwright/test"
-import { NO_PROVIDER, REMOTE_SERVER, SERVER, project, provider, session } from "../utils/app"
-import { mockOpenCodeServer, mockServers } from "../utils/mock-server"
-import { expectSessionTitle } from "../utils/waits"
+import { NO_PROVIDER, REMOTE_SERVER, SERVER, project, provider, session } from "@opencode/app-harness/app"
+import { mockOpenCodeServer, mockServers } from "@opencode/app-harness/mock-server"
+import { expectSessionTitle } from "@opencode/app-harness/waits"
 
 test.use({ viewport: { width: 1280, height: 900 } })
 

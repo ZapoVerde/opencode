@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@opencode/screenshots",
+  "version": "2.1.1",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "shots": "playwright test -c playwright.config.ts",
+    "shots:ui": "playwright test -c playwright.config.ts --ui",
+    "shots:story": "playwright test -c playwright.story.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@opencode/app-harness": "workspace:*",
+    "@opencode/storybook": "workspace:*",
+    "@playwright/test": "catalog:",
+    "@tsconfig/node22": "catalog:",
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}

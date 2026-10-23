@@ -25,7 +25,7 @@ import {
   toolPart,
   userMessage,
   userText,
-} from "../utils/timeline"
+} from "@opencode/app-harness/timeline"
 
 const detailed = timelinePresets[2].value
 

@@ -5,7 +5,7 @@ import {
   startVisualProbe,
   stopVisualProbe,
   visualPlan,
-} from "../../utils/visual-stability"
+} from "@opencode/app-harness/visual-stability"
 import {
   assistantMessage,
   completedAssistantInfo,
@@ -20,7 +20,7 @@ import {
   textPart,
   userMessage,
   waitForVisualSettle,
-} from "../../utils/timeline"
+} from "@opencode/app-harness/timeline"
 
 test.describe("timeline visual lifecycle stability", () => {
   test("streams empty, short, and long parallel shells to staggered completion", async ({ page }, testInfo) => {

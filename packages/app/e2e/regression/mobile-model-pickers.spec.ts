@@ -1,9 +1,9 @@
 import { expect, test, type Page } from "@playwright/test"
-import { fixture, installStressSessionTabs } from "../utils/session-fixture"
-import { sessionHref } from "../utils/app"
-import { openWithDirection } from "../utils/direction"
-import { mockOpenCodeServer } from "../utils/mock-server"
-import { expectAppVisible } from "../utils/waits"
+import { fixture, installStressSessionTabs } from "@opencode/app-harness/session-fixture"
+import { sessionHref } from "@opencode/app-harness/app"
+import { openWithDirection } from "@opencode/app-harness/direction"
+import { mockOpenCodeServer } from "@opencode/app-harness/mock-server"
+import { expectAppVisible } from "@opencode/app-harness/waits"
 
 for (const direction of ["ltr", "rtl"] as const) {
   for (const paid of [true, false]) {

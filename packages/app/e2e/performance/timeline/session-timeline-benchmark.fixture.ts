@@ -1,8 +1,8 @@
 import { base64Encode } from "@opencode/util/encode"
 import type { JsonValue, OpenCodeEvent, SessionMessageAssistant, SessionMessageInfo } from "@opencode/client/promise"
 import type { Page } from "@playwright/test"
-import { mockOpenCodeServer } from "../../utils/mock-server"
-import { expectAppVisible, expectSessionTitle } from "../../utils/waits"
+import { mockOpenCodeServer } from "@opencode/app-harness/mock-server"
+import { expectAppVisible, expectSessionTitle } from "@opencode/app-harness/waits"
 import { expect } from "../benchmark"
 import { createTwoFilesPatch } from "diff"
 

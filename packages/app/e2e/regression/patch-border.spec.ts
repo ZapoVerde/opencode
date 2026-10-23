@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
 import { createTwoFilesPatch } from "diff"
-import { assistantMessage, setupTimeline, toolPart, userMessage } from "../utils/timeline"
+import { assistantMessage, setupTimeline, toolPart, userMessage } from "@opencode/app-harness/timeline"
 
 test.use({
   deviceScaleFactor: 2,

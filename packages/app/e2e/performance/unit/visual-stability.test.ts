@@ -3,10 +3,10 @@ import {
   analyzeVisualStability,
   analyzeVisualStabilityByMarker,
   type VisualStabilityTrace,
-} from "../../utils/visual-stability"
-import { analyzeVisualObservations } from "../../utils/visual-stability/analyzer"
-import { visualPlan, type VisualInvariant } from "../../utils/visual-stability/invariant"
-import { defineVisualRegions, mapVisualRegions } from "../../utils/visual-stability/regions"
+} from "@opencode/app-harness/visual-stability"
+import { analyzeVisualObservations } from "@opencode/app-harness/visual-stability/analyzer"
+import { visualPlan, type VisualInvariant } from "@opencode/app-harness/visual-stability/invariant"
+import { defineVisualRegions, mapVisualRegions } from "@opencode/app-harness/visual-stability/regions"
 
 function trace(samples: VisualStabilityTrace["samples"]): VisualStabilityTrace {
   return { markers: [], samples }

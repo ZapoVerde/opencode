@@ -5,7 +5,7 @@ import {
   startVisualProbe,
   stopVisualProbe,
   visualPlan,
-} from "../../utils/visual-stability"
+} from "@opencode/app-harness/visual-stability"
 import {
   assistantMessage,
   directory,
@@ -18,7 +18,7 @@ import {
   textPart,
   toolPart,
   userMessage,
-} from "../../utils/timeline"
+} from "@opencode/app-harness/timeline"
 
 test.describe("timeline tool state stability", () => {
   test("moves lightweight tools through streaming, running, and completed without replacing rows", async ({

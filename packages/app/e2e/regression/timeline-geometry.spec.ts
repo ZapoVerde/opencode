@@ -15,14 +15,14 @@ import {
   userText,
   validateTimelineMessages,
   waitForVisualSettle,
-} from "../utils/timeline"
+} from "@opencode/app-harness/timeline"
 import {
   analyzeVisualObservations,
   defineVisualRegions,
   startVisualProbe,
   stopVisualProbe,
   visualPlan,
-} from "../utils/visual-stability"
+} from "@opencode/app-harness/visual-stability"
 
 const expanded = { editToolPartsExpanded: true, shellToolPartsExpanded: true, showReasoningSummaries: true }
 

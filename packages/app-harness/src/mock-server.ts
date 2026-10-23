@@ -407,7 +407,7 @@ export async function mockOpenCodeServer(page: Page, config: MockServerConfig) {
         headers: corsHeaders,
         json: { name: "MockUnsupported", message: `The mock server has no route for ${request}` },
       })
-      throw new Error(`Unmocked API request: ${request} (add it to e2e/utils/mock-server.ts)`)
+      throw new Error(`Unmocked API request: ${request} (add it to packages/app-harness/src/mock-server.ts)`)
     }
 
     return route.fulfill({

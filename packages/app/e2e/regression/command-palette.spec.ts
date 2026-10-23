@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test"
-import { captureConsoleWarnings, openCommandPalette, paletteSession } from "../utils/command-palette"
+import { captureConsoleWarnings, openCommandPalette, paletteSession } from "@opencode/app-harness/command-palette"
 
 test.use({ serviceWorkers: "block", permissions: ["clipboard-read", "clipboard-write"] })
 

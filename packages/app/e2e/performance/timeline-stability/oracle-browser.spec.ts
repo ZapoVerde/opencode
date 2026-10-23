@@ -5,8 +5,8 @@ import {
   startVisualProbe,
   stopVisualProbe,
   visualPlan,
-} from "../../utils/visual-stability"
-import { assistantMessage, renderedPartID, setupTimeline, textPart, userMessage } from "../../utils/timeline"
+} from "@opencode/app-harness/visual-stability"
+import { assistantMessage, renderedPartID, setupTimeline, textPart, userMessage } from "@opencode/app-harness/timeline"
 
 test("detects blanking caused by ancestor opacity", async ({ page }) => {
   const partID = "prt_oracle_ancestor_opacity"
