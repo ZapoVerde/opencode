@@ -5,8 +5,8 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import type { Page } from "@playwright/test"
 import { benchmark, benchmarkDiagnostics, expect } from "../benchmark"
-import { mockOpenCodeServer } from "../../utils/mock-server"
-import { expectSessionTitle } from "../../utils/waits"
+import { mockOpenCodeServer } from "@opencode/app-harness/mock-server"
+import { expectSessionTitle } from "@opencode/app-harness/waits"
 import type {} from "./probe"
 
 // Use the same installed native PTY package as Core, with a fixture-owned process.

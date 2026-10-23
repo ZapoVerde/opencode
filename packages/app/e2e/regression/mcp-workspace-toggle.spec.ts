@@ -1,8 +1,8 @@
 import { expect, test, type Page } from "@playwright/test"
-import { NO_PROVIDER, sessionHref } from "../utils/app"
-import type { MockServerConfig } from "../utils/mock-server"
-import { mockWorkspace } from "../utils/workspace"
-import { expectSessionTitle } from "../utils/waits"
+import { NO_PROVIDER, sessionHref } from "@opencode/app-harness/app"
+import type { MockServerConfig } from "@opencode/app-harness/mock-server"
+import { mockWorkspace } from "@opencode/app-harness/workspace"
+import { expectSessionTitle } from "@opencode/app-harness/waits"
 
 const directory = "C:\\OpenCode\\main"
 

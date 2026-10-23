@@ -7,6 +7,9 @@
     "storybook": "storybook dev -p 6006",
     "build": "storybook build"
   },
+  "exports": {
+    "./playwright/story": "./playwright/story.ts"
+  },
   "devDependencies": {
     "@opencode/client": "workspace:*",
     "@opencode/session-ui": "workspace:*",

@@ -4,9 +4,9 @@ import { PromptInput } from "@opencode/schema/prompt-input"
 import { SessionInbox } from "@opencode/schema/session-inbox"
 import { SessionMessage } from "@opencode/schema/session-message"
 import { Schema } from "effect"
-import { holdRoute, provider } from "../utils/app"
-import type { MockServerConfig } from "../utils/mock-server"
-import { openSession } from "../utils/workspace"
+import { holdRoute, provider } from "@opencode/app-harness/app"
+import type { MockServerConfig } from "@opencode/app-harness/mock-server"
+import { openSession } from "@opencode/app-harness/workspace"
 
 const sessionID = "ses_session_queue_regression"
 

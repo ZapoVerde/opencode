@@ -10,8 +10,8 @@ import {
   shell,
   textPart,
   userMessage,
-} from "../utils/timeline"
-import { capturePromptMotion, promptMotionIssues, readPromptPositions } from "../utils/prompt-motion"
+} from "@opencode/app-harness/timeline"
+import { capturePromptMotion, promptMotionIssues, readPromptPositions } from "@opencode/app-harness/prompt-motion"
 
 // Compositor prediction can add 20–25px to discrete CDP moves even in a plain
 // scrollport. Disable it so the visual assertion measures the supplied gesture.

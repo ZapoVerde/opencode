@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test"
-import { assistantMessage, setupTimeline, toolPart, userMessage } from "../utils/timeline"
+import { assistantMessage, setupTimeline, toolPart, userMessage } from "@opencode/app-harness/timeline"
 
 for (const locale of ["de", "ar"] as const) {
   test(`projects localized tool names with an English fallback in ${locale}`, async ({ page }) => {

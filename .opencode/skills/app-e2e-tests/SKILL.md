@@ -13,16 +13,16 @@ All paths below are relative to `packages/app` unless they start with `packages/
 
 - **No opencode backend.** Each shard leg runs `bun --cwd packages/app test:e2e:built --shard=<n>/2` (`test.yml:274-279`). It builds once and starts one Bun static server, `e2e/utils/serve.ts`, on `127.0.0.1:${PLAYWRIGHT_PORT ?? 3000}`. All 5 workers share it (`playwright.config.ts:23-27`).
   - `serve.ts` keeps vite preview's SPA fallback rules. Do not move built e2e back to vite preview. On case-insensitive file systems it synchronously reads the whole `dist/_assets` directory (about 3,100 files) for every asset request, so every worker's page loads wait in line. The `e2e/performance` configs still use it to keep their baselines comparable.
-- **The API is an in-memory mock per page,** running in the test worker. `mockOpenCodeServer` (`e2e/utils/mock-server.ts:202`):
+- **The API is an in-memory mock per page,** running in the test worker. `mockOpenCodeServer` (`packages/app-harness/src/mock-server.ts:202`):
   - answers `page.route("**/api/**")` with an Effect HttpApi handler;
   - fakes `/api/event` SSE with an init-script `fetch` override;
   - serves PTY sockets through `routeWebSocket`.
 - **Unmocked routes fail the test** with a 501 and `Unmocked API request` (`mock-server.ts:403-411`). Add the route to `mock-server.ts` once instead of routing around it in a spec.
 - **Build pages with the helpers:**
-  - `mockWorkspace`, `openSession`, `openDraft`, `openWorktreeDraft`, `mockRemoteServer`, `openSettings` (`e2e/utils/workspace.ts`);
-  - `setupTimeline` (`e2e/utils/timeline.ts:209`) for streamed timelines, `mockServers` (`mock-server.ts:495`) for several origins;
-  - `seed` (`e2e/utils/app.ts:61`) for storage, `holdRoute` (`app.ts:207`) to hold requests until you release them.
-- **Deliver events** with the mock's `push`, which buffers until the app connects, or with `installSseTransport` (`e2e/utils/sse-transport.ts:60`), whose `send` resolves on delivery. After `page.reload()`, await `transport.waitForConnection()` before sending (`e2e/regression/timeline-stream.spec.ts:1700-1702`).
+  - `mockWorkspace`, `openSession`, `openDraft`, `openWorktreeDraft`, `mockRemoteServer`, `openSettings` (`packages/app-harness/src/workspace.ts`);
+  - `setupTimeline` (`packages/app-harness/src/timeline.ts:209`) for streamed timelines, `mockServers` (`mock-server.ts:495`) for several origins;
+  - `seed` (`packages/app-harness/src/app.ts:61`) for storage, `holdRoute` (`app.ts:207`) to hold requests until you release them.
+- **Deliver events** with the mock's `push`, which buffers until the app connects, or with `installSseTransport` (`packages/app-harness/src/sse-transport.ts:60`), whose `send` resolves on delivery. After `page.reload()`, await `transport.waitForConnection()` before sending (`e2e/regression/timeline-stream.spec.ts:1700-1702`).
 - **Windows-only failures are races, not Windows code paths.** Mock directories are `C:/OpenCode/<name>` on every OS (`workspace.ts:33`), and nothing touches the disk. Lazy chunks, stylesheets and responses finish out of order more often on the Windows runners.
 
 ## Isolation
@@ -41,12 +41,12 @@ All paths below are relative to `packages/app` unless they start with `packages/
 - **Service workers are already blocked suite-wide** (`serviceWorkers: "block"`, `playwright.config.ts:66-67`). Do not add a per-file block; the 11 in `e2e/regression` are redundant.
   - Production registers `/sw.js` on load (`src/entry.tsx:54-55`) and precaches about 1,600 files (`globPatterns: ["**/*"]`, `vite.pwa.ts:34`). `e2e/service-worker/` covers it under its own config. The main config ignores that directory (`playwright.config.ts:33-36`), and CI runs it after shard 2 (`test.yml:281-285`).
   - Opt back in with `test.use({ serviceWorkers: "allow" })` only when the worker is the contract. It never controls the first load (`clientsClaim: false`, `vite.pwa.ts:26-28`). After a reload it can control the page, and page routes may then miss its requests.
-  - Every built-mode page load logs Playwright's block warning. Console collectors must ignore it, as `captureConsoleWarnings` does (`e2e/utils/command-palette.ts:15-26`).
+  - Every built-mode page load logs Playwright's block warning. Console collectors must ignore it, as `captureConsoleWarnings` does (`packages/app-harness/src/command-palette.ts:15-26`).
 - **Match new routes with a RegExp or a query-aware glob, not a function.**
   - A single function matcher makes Playwright intercept `**/*` for the page. Every static asset then round-trips to the test worker (250 continued requests in one Windows test).
   - Existing `holdRoute` calls such as `review.spec.ts:51` and `mockMissingLocation` (`mock-server.ts:480`) still use functions and pay this. Converting one route gains nothing while another function route is registered on the page.
   - Globs match the whole URL, so `**/api/vcs/init` misses `/api/vcs/init?location...`. Write `/\/api\/vcs\/init\?/` or `"**/api/session?*"` (`command-palette.spec.ts:10`, `:28`).
-- **Use the stress fixture only when scale is the contract.** `fixture`, `mockStressTimeline` and `installStressSessionTabs` (`e2e/utils/session-fixture.ts:336`, `:436`, `:448`) serve a long timeline with 300-line diffs.
+- **Use the stress fixture only when scale is the contract.** `fixture`, `mockStressTimeline` and `installStressSessionTabs` (`packages/app-harness/src/session-fixture.ts:336`, `:436`, `:448`) serve a long timeline with 300-line diffs.
   - Its cold mount reveals rows only after worker-rendered markdown arrives. Mounting one of its diffs blocked the renderer for 4-11 s on CI.
   - The 14 regression files that use it held about half of the e2e flakes CI found.
   - Prefer `openSession` or `setupTimeline` with the few messages the test needs.
@@ -71,7 +71,7 @@ Most of these rarely reproduce on an idle local machine.
 - **A shortcut that does nothing is usually a product guard, not timing.** The global handler ignores keys while `dialog.active` (`src/shell/commands/command.tsx:489`). `active` is the top dialog that has not started closing (`packages/ui/src/context/dialog.tsx:52`, `:310-311`). A dialog that has started closing does not block keys during its 100 ms exit (`dialog.tsx:87`), but any open dialog does, including one you did not expect. Check that guard before you add a wait.
 - **Shortcut tests fail on local macOS; that is not a regression.**
   - The Desktop Chrome profile reports a Windows UA and `navigator.platform = "Win32"`, so the app (`IS_MAC`, `command.tsx:14`) expects Ctrl. On macOS, `ControlOrMeta` sends Meta.
-  - Every test that opens the palette through `openCommandPalette` (`e2e/utils/command-palette.ts:50`) fails locally and passes in CI, as do `tabs.spec.ts:835` and `timeline-cache.spec.ts:163`. Verify on Linux or in CI, or press `Control` in a throwaway copy. Do not edit tests for macOS.
+  - Every test that opens the palette through `openCommandPalette` (`packages/app-harness/src/command-palette.ts:50`) fails locally and passes in CI, as do `tabs.spec.ts:835` and `timeline-cache.spec.ts:163`. Verify on Linux or in CI, or press `Control` in a throwaway copy. Do not edit tests for macOS.
   - A new test can pick the modifier from the page, as `session-summary.spec.ts:29-30` does.
 - **Font probes mislead.** `document.fonts.check()` can stay false after the font has loaded: when a lazy `@layer` stylesheet activates late, Chromium rebuilds font faces as unloaded. The code-font test failed outright in 9 of 36 Windows runs that way. Polling a probe that lays out text can make itself true. Await `document.fonts.ready`, lay out new text, and then check once (`timeline-cache.spec.ts:281-293`).
 - **Use the harness's signals.** `holdRoute(...).arrived` resolves when the request reaches the route, and `transport.send` resolves after delivery. `setupTimeline(...).waitForPart` resolves once a part renders (`timeline.ts:328`).
@@ -96,7 +96,7 @@ Most of these rarely reproduce on an idle local machine.
   - Use `launchOptions` only when a Chromium flag is the contract, with a comment (`patch-border.spec.ts:5-9`).
 - **Never spread `devices[...]` into `test.use`.** iPhone entries set `defaultBrowserType: "webkit"`, which forks a worker and needs a browser that CI never installs (`test.yml:269-272`). Copy the fields you need, as `mobile-timeline-scroll.spec.ts:23-28` does.
 - **Retries are not free.** CI retries twice (`playwright.config.ts:44`). Each failure restarts the worker's browser and costs 10-30 s of cleanup on Windows. The first retry then reruns with a trace and a video (`:62-65`).
-- **Timeouts are not a fix.** The limits are 60 s per test and 10 s per assertion (`playwright.config.ts:38-41`). `APP_READY_TIMEOUT` (30 s, `e2e/utils/waits.ts:4`) covers only first readiness.
+- **Timeouts are not a fix.** The limits are 60 s per test and 10 s per assertion (`playwright.config.ts:38-41`). `APP_READY_TIMEOUT` (30 s, `packages/app-harness/src/waits.ts:4`) covers only first readiness.
   - When one wait is genuinely long, scope the timeout to that assertion and say what takes the time. `settings-wsl.spec.ts:268-276` does this with `{ timeout: 20_000 }` for a 10 s health check.
   - `test.setTimeout` does not lengthen assertions. `timeline-history.spec.ts:73` sets 240 s without a comment and still fails at the 10 s poll at `:127`.
 

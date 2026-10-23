@@ -1,8 +1,8 @@
 import path from "node:path"
 import { parseArgs } from "node:util"
-import { createMockServerHandler } from "../utils/mock-server"
-import { fixture } from "../utils/session-fixture"
-import { messages } from "../utils/markdown-sessions"
+import { createMockServerHandler } from "@opencode/app-harness/mock-server"
+import { fixture } from "@opencode/app-harness/session-fixture"
+import { messages } from "@opencode/app-harness/markdown-sessions"
 import { createReviewDiffs } from "./timeline/timeline-test-helpers"
 
 const args = parseArgs({

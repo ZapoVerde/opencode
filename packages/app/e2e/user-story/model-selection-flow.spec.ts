@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test"
-import { provider, sessionHref } from "../utils/app"
-import { mockOpenCodeServer } from "../utils/mock-server"
-import { expectAppVisible } from "../utils/waits"
-import { openSession } from "../utils/workspace"
+import { provider, sessionHref } from "@opencode/app-harness/app"
+import { mockOpenCodeServer } from "@opencode/app-harness/mock-server"
+import { expectAppVisible } from "@opencode/app-harness/waits"
+import { openSession } from "@opencode/app-harness/workspace"
 
 const directory = "C:/OpenCode/NewProject"
 

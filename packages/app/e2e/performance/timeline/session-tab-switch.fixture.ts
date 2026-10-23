@@ -1,4 +1,4 @@
-import { exchanges, messages } from "../../utils/markdown-sessions"
+import { exchanges, messages } from "@opencode/app-harness/markdown-sessions"
 
 export const workload = {
   fixture: "long-complex-markdown-v1",

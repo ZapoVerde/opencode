@@ -1,6 +1,6 @@
 import type { OpenCodeEvent } from "@opencode/client/promise"
 import { expect, test } from "@playwright/test"
-import { openCommandPalette, paletteSession } from "../utils/command-palette"
+import { openCommandPalette, paletteSession } from "@opencode/app-harness/command-palette"
 
 test.use({ serviceWorkers: "block" })
 

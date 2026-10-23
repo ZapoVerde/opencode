@@ -18,7 +18,7 @@
 ## Test Ownership
 
 - Each product area has one keeper suite in `regression/` (for example tabs, settings, review, terminal, timeline history). A new regression is a new case in that suite, not a new spec file.
-- Build pages with the shared harness in `utils/` (`app.ts`, `workspace.ts`, `mock-server.ts` with `mockServers` and the mock PTY). Do not hand-write routing, storage seeding, or fixtures inside a spec. If the harness lacks something, add it to `utils/` once rather than copying setup.
-- Files in `utils/` must not end in `.spec.ts` or `.test.ts`, or Playwright runs them as tests.
+- Build pages with the shared harness in `packages/app-harness/src/` (`app.ts`, `workspace.ts`, `mock-server.ts` with `mockServers` and the mock PTY). Do not hand-write routing, storage seeding, or fixtures inside a spec. If the harness lacks something, add it to `packages/app-harness/src/` once rather than copying setup.
+- `utils/` holds only the Vite fixture entrypoints and `serve.ts`. Files there must not end in `.spec.ts` or `.test.ts`, or Playwright runs them as tests.
 - Assert what the user sees and can do. Assert exact pixels or CSS values only when that measurement is the contract, and then only once, in the owning keeper.
-- `performance/` holds benchmarks that CI does not run. Never prove correctness with a benchmark, and never copy benchmark code into a regression spec; import it from `utils/`.
+- `performance/` holds benchmarks that CI does not run. Never prove correctness with a benchmark, and never copy benchmark code into a regression spec; import it from `packages/app-harness/src/`.

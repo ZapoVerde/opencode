@@ -1,5 +1,5 @@
 import { benchmark, expect } from "./benchmark"
-import { openCommandPalette } from "../utils/command-palette"
+import { openCommandPalette } from "@opencode/app-harness/command-palette"
 
 benchmark.use({
   viewport: { width: 1440, height: 900 },

@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test"
-import { sessionHref } from "../utils/app"
-import { openSession } from "../utils/workspace"
-import { expectSessionTitle } from "../utils/waits"
+import { sessionHref } from "@opencode/app-harness/app"
+import { openSession } from "@opencode/app-harness/workspace"
+import { expectSessionTitle } from "@opencode/app-harness/waits"
 
 test.use({ viewport: { width: 1440, height: 900 } })
 

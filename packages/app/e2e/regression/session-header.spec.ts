@@ -1,9 +1,9 @@
 import type { SessionMessageInfo } from "@opencode/client/promise"
 import { expect, test, type Page } from "@playwright/test"
-import { seed, sessionHref } from "../utils/app"
-import { fixture, mockStressTimeline } from "../utils/session-fixture"
-import { expectSessionTitle } from "../utils/waits"
-import { mockWorkspace, openSession } from "../utils/workspace"
+import { seed, sessionHref } from "@opencode/app-harness/app"
+import { fixture, mockStressTimeline } from "@opencode/app-harness/session-fixture"
+import { expectSessionTitle } from "@opencode/app-harness/waits"
+import { mockWorkspace, openSession } from "@opencode/app-harness/workspace"
 
 const tabs = (page: Page) => page.locator('[data-slot="titlebar-tabs"] a')
 

@@ -1,9 +1,9 @@
 import { benchmark, expect } from "../benchmark"
-import { mockOpenCodeServer } from "../../utils/mock-server"
-import { expectSessionTitle } from "../../utils/waits"
-import { fixture, installStressSessionTabs } from "../../utils/session-fixture"
-import { sessionHref } from "../../utils/app"
-import { messages } from "../../utils/markdown-sessions"
+import { mockOpenCodeServer } from "@opencode/app-harness/mock-server"
+import { expectSessionTitle } from "@opencode/app-harness/waits"
+import { fixture, installStressSessionTabs } from "@opencode/app-harness/session-fixture"
+import { sessionHref } from "@opencode/app-harness/app"
+import { messages } from "@opencode/app-harness/markdown-sessions"
 import { measureSessionSwitch, waitForStableTimeline } from "./session-tab-switch-probe"
 
 const sessions = Array.from({ length: 8 }, (_, index) => ({

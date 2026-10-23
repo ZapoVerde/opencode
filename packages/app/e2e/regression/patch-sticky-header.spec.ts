@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test"
 import { timelinePresets } from "@opencode/session-ui/timeline/detail"
 import { createTwoFilesPatch } from "diff"
-import { assistantMessage, setupTimeline, textPart, toolPart, userMessage } from "../utils/timeline"
+import { assistantMessage, setupTimeline, textPart, toolPart, userMessage } from "@opencode/app-harness/timeline"
 
 const before = Array.from({ length: 80 }, (_, index) => `export const value${index} = ${index}\n`).join("")
 

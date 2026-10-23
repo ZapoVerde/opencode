@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
 import { timelinePresets } from "@opencode/session-ui/timeline/detail"
-import { setupTimeline } from "../utils/timeline"
+import { setupTimeline } from "@opencode/app-harness/timeline"
 
 for (const { width, ...profile } of [
   { width: 1400, locale: "en", direction: "ltr" },

@@ -1,8 +1,8 @@
 import { expect, test, type Page } from "@playwright/test"
-import { SERVER, holdRoute, seed, sessionHref } from "../utils/app"
-import { openWithDirection } from "../utils/direction"
-import { mockOpenCodeServer } from "../utils/mock-server"
-import { fixture, installStressSessionTabs, mockStressTimeline, pageMessages } from "../utils/session-fixture"
+import { SERVER, holdRoute, seed, sessionHref } from "@opencode/app-harness/app"
+import { openWithDirection } from "@opencode/app-harness/direction"
+import { mockOpenCodeServer } from "@opencode/app-harness/mock-server"
+import { fixture, installStressSessionTabs, mockStressTimeline, pageMessages } from "@opencode/app-harness/session-fixture"
 
 const cors = { "access-control-allow-origin": "*" }
 

@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test"
-import { tabKey } from "../utils/app"
-import { fileDiff, openSession } from "../utils/workspace"
-import { expectSessionTitle } from "../utils/waits"
+import { tabKey } from "@opencode/app-harness/app"
+import { fileDiff, openSession } from "@opencode/app-harness/workspace"
+import { expectSessionTitle } from "@opencode/app-harness/waits"
 
 test("review and terminal follow the session tab and stay mounted", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })

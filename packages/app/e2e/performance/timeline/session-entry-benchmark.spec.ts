@@ -1,7 +1,7 @@
 import { benchmark, benchmarkDiagnostics, expect } from "../benchmark"
 import { measureNavigationMilestones } from "./navigation-milestones"
-import { fixture, installStressSessionTabs, mockStressTimeline } from "../../utils/session-fixture"
-import { sessionHref } from "../../utils/app"
+import { fixture, installStressSessionTabs, mockStressTimeline } from "@opencode/app-harness/session-fixture"
+import { sessionHref } from "@opencode/app-harness/app"
 import { measureSessionSwitch, waitForStableTimeline } from "./session-tab-switch-probe"
 
 benchmark.use({

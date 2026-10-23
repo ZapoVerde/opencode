@@ -1,8 +1,8 @@
 import { base64Encode, checksum } from "@opencode/util/encode"
 import { expect, test } from "@playwright/test"
-import { sessionHref } from "../utils/app"
-import { mockWorkspace, openSession, type WorkspaceInput } from "../utils/workspace"
-import { expectSessionTitle } from "../utils/waits"
+import { sessionHref } from "@opencode/app-harness/app"
+import { mockWorkspace, openSession, type WorkspaceInput } from "@opencode/app-harness/workspace"
+import { expectSessionTitle } from "@opencode/app-harness/waits"
 
 const workspace = { name: "TerminalInput", pty: {} } satisfies WorkspaceInput
 

@@ -1,10 +1,10 @@
 import type { OpenCodeEvent, SessionMessageInfo } from "@opencode/client/promise"
 import { expect, test, type Locator, type Page } from "@playwright/test"
 import { base64Encode } from "@opencode/util/encode"
-import { SERVER, holdRoute, project, provider, session, workspaceKey } from "../utils/app"
-import { mockOpenCodeServer } from "../utils/mock-server"
-import { fileDiff, fileNode, openSession } from "../utils/workspace"
-import { expectSessionTitle } from "../utils/waits"
+import { SERVER, holdRoute, project, provider, session, workspaceKey } from "@opencode/app-harness/app"
+import { mockOpenCodeServer } from "@opencode/app-harness/mock-server"
+import { fileDiff, fileNode, openSession } from "@opencode/app-harness/workspace"
+import { expectSessionTitle } from "@opencode/app-harness/waits"
 
 test.use({ viewport: { width: 1440, height: 900 } })
 

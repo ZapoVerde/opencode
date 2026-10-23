@@ -1,5 +1,5 @@
 import { benchmark, expect } from "../benchmark"
-import { expectSessionTitle } from "../../utils/waits"
+import { expectSessionTitle } from "@opencode/app-harness/waits"
 import {
   collectCachedRepaintTrace,
   compressCachedRepaintTrace,
@@ -12,8 +12,8 @@ import {
   installStressSessionTabs,
   installTimelineSettings,
   mockStressTimeline,
-} from "../../utils/session-fixture"
-import { sessionHref } from "../../utils/app"
+} from "@opencode/app-harness/session-fixture"
+import { sessionHref } from "@opencode/app-harness/app"
 
 benchmark("samples cached session repaint after the click", async ({ page, report }) => {
   benchmark.setTimeout(120_000)

@@ -1,8 +1,8 @@
 import type { SessionMessageInfo } from "@opencode/client/promise"
 import { benchmark, expect } from "../benchmark"
-import { mockOpenCodeServer } from "../../utils/mock-server"
-import { fixture, installStressSessionTabs, installTimelineSettings } from "../../utils/session-fixture"
-import { sessionHref } from "../../utils/app"
+import { mockOpenCodeServer } from "@opencode/app-harness/mock-server"
+import { fixture, installStressSessionTabs, installTimelineSettings } from "@opencode/app-harness/session-fixture"
+import { sessionHref } from "@opencode/app-harness/app"
 import { completedAnswer } from "../../../../session-ui/performance/markdown-lifetime/answer"
 import { installMarkdownGate } from "./probe"
 

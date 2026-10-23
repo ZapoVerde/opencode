@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test"
-import { seed, sessionHref, type SeedInput } from "../utils/app"
-import { fixture, mockStressTimeline } from "../utils/session-fixture"
-import { fileNode } from "../utils/workspace"
+import { seed, sessionHref, type SeedInput } from "@opencode/app-harness/app"
+import { fixture, mockStressTimeline } from "@opencode/app-harness/session-fixture"
+import { fileNode } from "@opencode/app-harness/workspace"
 
 // The source and target sessions; the child session is not a home row.
 const rows = 2

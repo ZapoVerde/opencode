@@ -1,9 +1,9 @@
 import { expect, test, type Page } from "@playwright/test"
-import { expectPath, holdRoute, NO_PROVIDER, project, REMOTE_SERVER, seed, sessionHref } from "../utils/app"
-import { mockOpenCodeServer } from "../utils/mock-server"
-import { fixture, mockStressTimeline } from "../utils/session-fixture"
-import { mockRemoteServer } from "../utils/workspace"
-import { APP_READY_TIMEOUT, expectAppVisible } from "../utils/waits"
+import { expectPath, holdRoute, NO_PROVIDER, project, REMOTE_SERVER, seed, sessionHref } from "@opencode/app-harness/app"
+import { mockOpenCodeServer } from "@opencode/app-harness/mock-server"
+import { fixture, mockStressTimeline } from "@opencode/app-harness/session-fixture"
+import { mockRemoteServer } from "@opencode/app-harness/workspace"
+import { APP_READY_TIMEOUT, expectAppVisible } from "@opencode/app-harness/waits"
 
 test.use({ serviceWorkers: "block" })
 

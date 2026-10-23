@@ -1,7 +1,7 @@
 import { expect, test, type Page, type Request } from "@playwright/test"
-import { sessionHref } from "../utils/app"
-import { fixture, mockStressTimeline } from "../utils/session-fixture"
-import { fileNode } from "../utils/workspace"
+import { sessionHref } from "@opencode/app-harness/app"
+import { fixture, mockStressTimeline } from "@opencode/app-harness/session-fixture"
+import { fileNode } from "@opencode/app-harness/workspace"
 
 test.use({ viewport: { width: 390, height: 844 } })
 

@@ -5,7 +5,7 @@ import {
   startVisualProbe,
   stopVisualProbe,
   visualPlan,
-} from "../../utils/visual-stability"
+} from "@opencode/app-harness/visual-stability"
 import {
   assistantMessage,
   partUpdated,
@@ -15,7 +15,7 @@ import {
   textPart,
   userMessage,
   waitForVisualSettle,
-} from "../../utils/timeline"
+} from "@opencode/app-harness/timeline"
 
 // Fractional scaling exercises different browser rounding than the baseline.
 for (const deviceScaleFactor of [1, 1.25]) {

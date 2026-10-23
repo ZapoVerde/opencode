@@ -10,11 +10,11 @@ import {
   seed,
   session,
   sessionHref,
-} from "../utils/app"
-import { mockServers } from "../utils/mock-server"
-import { fixture, mockStressTimeline } from "../utils/session-fixture"
-import { fileNode, mockWorkspace, openSession } from "../utils/workspace"
-import { expectSessionTitle } from "../utils/waits"
+} from "@opencode/app-harness/app"
+import { mockServers } from "@opencode/app-harness/mock-server"
+import { fixture, mockStressTimeline } from "@opencode/app-harness/session-fixture"
+import { fileNode, mockWorkspace, openSession } from "@opencode/app-harness/workspace"
+import { expectSessionTitle } from "@opencode/app-harness/waits"
 
 const a = { id: "ses_tab_a", title: "Tab A session" }
 

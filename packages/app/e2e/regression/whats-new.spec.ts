@@ -1,9 +1,9 @@
 import { expect, test, type Page } from "@playwright/test"
 import pkg from "../../package.json" with { type: "json" }
-import { SERVER, type SeedInput } from "../utils/app"
-import { openHeldStart } from "../utils/direction"
-import { expectAppVisible } from "../utils/waits"
-import { mockWorkspace } from "../utils/workspace"
+import { SERVER, type SeedInput } from "@opencode/app-harness/app"
+import { openHeldStart } from "@opencode/app-harness/direction"
+import { expectAppVisible } from "@opencode/app-harness/waits"
+import { mockWorkspace } from "@opencode/app-harness/workspace"
 
 // The web app's version, which What's New compares with the version last seen.
 const current = pkg.version

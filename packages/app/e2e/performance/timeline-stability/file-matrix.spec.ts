@@ -6,7 +6,7 @@ import {
   startVisualProbe,
   stopVisualProbe,
   visualPlan,
-} from "../../utils/visual-stability"
+} from "@opencode/app-harness/visual-stability"
 import {
   assistantMessage,
   partUpdated,
@@ -16,7 +16,7 @@ import {
   toolPart,
   userMessage,
   waitForVisualSettle,
-} from "../../utils/timeline"
+} from "@opencode/app-harness/timeline"
 
 const profiles = [
   {

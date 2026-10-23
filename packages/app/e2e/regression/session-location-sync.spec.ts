@@ -1,8 +1,8 @@
 import { expect, test, type Page } from "@playwright/test"
 import { base64Encode } from "@opencode/util/encode"
-import { fixture } from "../utils/session-fixture"
-import { mockOpenCodeServer } from "../utils/mock-server"
-import { installSseTransport } from "../utils/sse-transport"
+import { fixture } from "@opencode/app-harness/session-fixture"
+import { mockOpenCodeServer } from "@opencode/app-harness/mock-server"
+import { installSseTransport } from "@opencode/app-harness/sse-transport"
 
 for (const endpoint of ["/api/location", "/api/agent"]) {
   for (const recover of [false, true]) {

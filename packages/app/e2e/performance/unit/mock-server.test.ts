@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import type { Page, Route } from "@playwright/test"
-import { createMockServerHandler, mockOpenCodeServer } from "../../utils/mock-server"
+import { createMockServerHandler, mockOpenCodeServer } from "@opencode/app-harness/mock-server"
 
 test("serves an empty config document list for composer defaults", async () => {
   const server = createMockServerHandler({
