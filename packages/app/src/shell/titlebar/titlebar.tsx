@@ -9,6 +9,7 @@ import { Tooltip } from "@opencode/ui/tooltip"
 
 import { LayoutRoute, useLayout } from "@/shell/state/layout"
 import { usePlatform } from "@/runtime/platform/platform"
+import { openPath } from "@/runtime/platform/open-path"
 import { useCommand } from "@/shell/commands/command"
 import { useLanguage } from "@/runtime/i18n/language"
 import { useSettings } from "@/settings/model"
@@ -666,7 +667,7 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
                                   class="flex h-11 shrink-0 items-center gap-2 rounded-[6px] px-2 text-[13px] leading-4 text-v2-text-text-faint hover:bg-v2-background-bg-layer-02 focus-visible:outline-none focus-visible:bg-v2-background-bg-layer-02"
                                   onClick={() => {
                                     setMobileTabs("open", false)
-                                    platform.openExternal(new URL("/usage/", window.location.origin).href)
+                                    openPath("/usage/")
                                   }}
                                 >
                                   <Icon name="window-analytics" size="small" />

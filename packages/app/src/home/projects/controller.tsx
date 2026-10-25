@@ -5,6 +5,7 @@ import { useSettingsSurface } from "@/settings/surface"
 import { type LocalProject } from "@/shell/state/layout"
 import { useLanguage } from "@/runtime/i18n/language"
 import { usePlatform } from "@/runtime/platform/platform"
+import { openPath } from "@/runtime/platform/open-path"
 import { ServerConnection } from "@/runtime/server/registry"
 import { closeHomeProject, errorMessage, homeProjectDirectories } from "@/shell/layout/helpers"
 import { Persist, persisted } from "@/runtime/persistence/storage"
@@ -182,7 +183,7 @@ export function createHomeProjectsController(home: HomeController) {
     utility: {
       settings: openSettings,
       help: () => platform.openExternal("https://opencode.ai/desktop-feedback"),
-      usage: () => platform.openExternal(new URL("/usage/", window.location.origin).href),
+      usage: () => openPath("/usage/"),
     },
   }
 }
