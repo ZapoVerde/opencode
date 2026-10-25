@@ -56,6 +56,7 @@ export function Home() {
           class="flex"
           onOpenSettings={projects.utility.settings}
           onOpenHelp={projects.utility.help}
+          onOpenUsage={projects.utility.usage}
           language={projects.copy.language}
         />
       </div>

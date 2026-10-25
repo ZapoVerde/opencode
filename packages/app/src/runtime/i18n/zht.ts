@@ -452,6 +452,7 @@ export const dict = {
   "common.key.esc": "ESC",
   "sidebar.settings": "設定",
   "sidebar.help": "說明",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "最近工作階段",
   "sidebar.project.clearNotifications": "清除通知",
 

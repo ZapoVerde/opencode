@@ -447,6 +447,7 @@ export const dict = {
   "common.time.daysAgo.short": "{{count}}d síðan",
   "sidebar.settings": "Stillingar",
   "sidebar.help": "Hjálp",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Nýlegar setur",
   "sidebar.project.clearNotifications": "Hreinsaðu tilkynningar",
   "settings.section.server": "Netþjónn",

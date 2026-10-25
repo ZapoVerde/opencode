@@ -460,6 +460,7 @@ export const dict = {
 
   "sidebar.settings": "设置",
   "sidebar.help": "帮助",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "最近会话",
   "sidebar.project.clearNotifications": "清除通知",
 

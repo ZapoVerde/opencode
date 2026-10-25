@@ -450,6 +450,7 @@ export const dict = {
   "common.time.daysAgo.short": "пре {{count}}д",
   "sidebar.settings": "Подешавања",
   "sidebar.help": "Помоћ",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Недавне сесије",
   "sidebar.project.clearNotifications": "Обришите обавештења",
   "settings.section.server": "Сервер",

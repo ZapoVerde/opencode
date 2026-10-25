@@ -450,6 +450,7 @@ export const dict = {
   "common.time.daysAgo.short": "{{count}}d လွန်ခဲ့သော",
   "sidebar.settings": "ဆက်တင်များ",
   "sidebar.help": "အကူအညီ",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "လတ်တလော စက်ရှင်များ",
   "sidebar.project.clearNotifications": "အကြောင်းကြားချက်များကို ရှင်းလင်းပါ။",
   "settings.section.server": "ဆာဗာ",

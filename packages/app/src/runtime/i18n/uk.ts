@@ -518,6 +518,7 @@ export const dict = {
 
   "sidebar.settings": "Налаштування",
   "sidebar.help": "Довідка",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Нещодавні сесії",
   "sidebar.project.clearNotifications": "Очистити сповіщення",
 

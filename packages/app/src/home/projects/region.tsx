@@ -43,6 +43,7 @@ export function HomeProjects(props: {
       onCloseProject={props.projects.project.close}
       onOpenSettings={props.projects.utility.settings}
       onOpenHelp={props.projects.utility.help}
+      onOpenUsage={props.projects.utility.usage}
     />
   )
 }

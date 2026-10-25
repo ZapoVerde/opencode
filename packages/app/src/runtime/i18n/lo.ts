@@ -449,6 +449,7 @@ export const dict = {
   "common.time.daysAgo.short": "{{count}}d ກ່ອນຫນ້ານີ້",
   "sidebar.settings": "ການຕັ້ງຄ່າ",
   "sidebar.help": "ຊ່ວຍ",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "ເຊດຊັນທີ່ຜ່ານມາ",
   "sidebar.project.clearNotifications": "ລຶບການແຈ້ງເຕືອນ",
   "settings.section.server": "ເຊີບເວີ",

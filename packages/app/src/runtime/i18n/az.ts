@@ -443,6 +443,7 @@ export const dict = {
   "common.time.daysAgo.short": "{{count}}g əvvəl",
   "sidebar.settings": "Tənzimləmələr",
   "sidebar.help": "Kömək",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Son sessiyalar",
   "sidebar.project.clearNotifications": "Bildirişləri təmizlə",
   "settings.section.server": "Server",

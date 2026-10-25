@@ -449,6 +449,7 @@ export const dict = {
   "common.time.daysAgo.short": "\u2068{{count}}\u2069d ކުރިން",
   "sidebar.settings": "ސެޓިންގސް",
   "sidebar.help": "އެހީވުން",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "ފަހުގެ ސެޝަންތަކެވެ",
   "sidebar.project.clearNotifications": "ނޮޓިފިކޭޝަންތައް ސާފުކުރުން",
   "settings.section.server": "ސަރވަރ އެވެ",

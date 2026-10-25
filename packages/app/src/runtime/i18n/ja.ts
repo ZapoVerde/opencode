@@ -420,6 +420,7 @@ export const dict = {
   "common.key.esc": "ESC",
   "sidebar.settings": "設定",
   "sidebar.help": "ヘルプ",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "最近のセッション",
   "sidebar.project.clearNotifications": "通知をクリア",
   "settings.section.server": "サーバー",

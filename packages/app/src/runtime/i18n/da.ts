@@ -581,6 +581,7 @@ export const dict = {
   "common.key.esc": "ESC",
   "sidebar.settings": "Indstillinger",
   "sidebar.help": "Hjælp",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Seneste sessioner",
   "sidebar.project.clearNotifications": "Ryd notifikationer",
 

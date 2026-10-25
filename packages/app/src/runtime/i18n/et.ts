@@ -434,6 +434,7 @@ export const dict = {
   "common.time.daysAgo.short": "{{count}}p tagasi",
   "sidebar.settings": "Seaded",
   "sidebar.help": "Abi",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Viimased istungid",
   "sidebar.project.clearNotifications": "Tühjenda märguanded",
   "settings.section.server": "Server",

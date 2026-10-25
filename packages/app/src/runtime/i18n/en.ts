@@ -649,6 +649,7 @@ export const dict = {
 
   "sidebar.settings": "Settings",
   "sidebar.help": "Help",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Recent sessions",
   "sidebar.project.clearNotifications": "Clear notifications",
 

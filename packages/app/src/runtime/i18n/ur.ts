@@ -451,6 +451,7 @@ export const dict = {
   "common.time.daysAgo.short": "\u2068{{count}}\u2069d پہلے",
   "sidebar.settings": "ترتیبات",
   "sidebar.help": "مدد",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "حالیہ سیشنز",
   "sidebar.project.clearNotifications": "اطلاعات کو صاف کریں۔",
   "settings.section.server": "سرور",

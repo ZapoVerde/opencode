@@ -436,6 +436,7 @@ export const dict = {
   "common.time.daysAgo.short": "{{count}}d síðani",
   "sidebar.settings": "Innstillingar",
   "sidebar.help": "Hjálp",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Seinastu fundir",
   "sidebar.project.clearNotifications": "Rudda fráboðanir",
   "settings.section.server": "Ambætari",

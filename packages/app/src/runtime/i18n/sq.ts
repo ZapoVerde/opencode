@@ -437,6 +437,7 @@ export const dict = {
   "common.time.daysAgo.short": "{{count}}d më parë",
   "sidebar.settings": "Cilësimet",
   "sidebar.help": "Ndihmë",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Seancat e fundit",
   "sidebar.project.clearNotifications": "Pastro njoftimet",
   "settings.section.server": "Serveri",

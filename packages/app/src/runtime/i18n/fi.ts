@@ -578,6 +578,7 @@ export const dict = {
   "common.time.daysAgo.short": "{{count}} pv sitten",
   "sidebar.settings": "Asetukset",
   "sidebar.help": "Ohje",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Viimeaikaiset istunnot",
   "sidebar.project.clearNotifications": "Tyhjennä ilmoitukset",
   "settings.section.server": "Palvelin",

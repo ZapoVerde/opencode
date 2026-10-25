@@ -440,6 +440,7 @@ export const dict = {
   "common.time.daysAgo.short": "{{count}}দিন আগে",
   "sidebar.settings": "সেটিংস",
   "sidebar.help": "সাহায্য",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "সাম্প্রতিক সেশন",
   "sidebar.project.clearNotifications": "বিজ্ঞপ্তিগুলি সাফ করুন",
   "settings.section.server": "সার্ভার",

@@ -651,6 +651,7 @@ export const dict = {
   "common.time.daysAgo.short": "{{count}}d geleden",
   "sidebar.settings": "Instellingen",
   "sidebar.help": "Hulp",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Recente sessies",
   "sidebar.project.clearNotifications": "Meldingen wissen",
   "settings.section.server": "Server",

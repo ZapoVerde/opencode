@@ -410,6 +410,7 @@ export const dict = {
   "common.key.esc": "ESC",
   "sidebar.settings": "Ustawienia",
   "sidebar.help": "Pomoc",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Ostatnie sesje",
   "sidebar.project.clearNotifications": "Wyczyść powiadomienia",
   "settings.section.server": "Serwer",

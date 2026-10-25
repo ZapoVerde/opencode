@@ -432,6 +432,7 @@ export const dict = {
   "common.time.daysAgo.short": "ከ{{count}} ቀን በፊት",
   "sidebar.settings": "ቅንጅቶች",
   "sidebar.help": "እገዛ",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "የቅርብ ጊዜ ክፍለ ጊዜዎች",
   "sidebar.project.clearNotifications": "ማሳወቂያዎችን አጽዳ",
   "settings.section.server": "አገልጋይ",

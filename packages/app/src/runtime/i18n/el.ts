@@ -442,6 +442,7 @@ export const dict = {
   "common.time.daysAgo.short": "{{count}}ημέρα πριν",
   "sidebar.settings": "Ρυθμίσεις",
   "sidebar.help": "Βοήθεια",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Πρόσφατες συνεδρίες",
   "sidebar.project.clearNotifications": "Διαγραφή ειδοποιήσεων",
   "settings.section.server": "Διακομιστής",
