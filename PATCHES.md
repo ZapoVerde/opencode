@@ -143,6 +143,19 @@ Upstream still does not address any active patch as of `097a93e511`: there is no
 - **Verification:** 100% renames for the moved harness. On the patch branch and the integration branch, root `bun run typecheck` passes 36/36 and `bun run lint` reports 0 errors. `bun run shots` captures `session-dark`, `session-mobile`, `home`, and `settings-light`; `SHOTS_STORY_ID=current-session-error-card--provider-errors bun run shots:story` captures a story. `packages/app` `typecheck:e2e` still reports only its pre-existing 9 errors. Re-verified on the 2026-10-25 merge: upstream changed no file under `packages/app/e2e/utils`, so the move holds; the five e2e specs upstream edited (`review`, `session-header`, `side-panels`, `tabs`, the timeline probe) merged with their `@opencode/app-harness` imports intact, no stale `../utils/` imports remain, `typecheck:e2e` still reports only the same 9 pre-existing upstream errors, and root `bun run check` passes 36/36 with both new packages in scope.
 - **When updating:** After an upstream merge, check for new or changed files under `packages/app/e2e/utils` and rerun the harness import rewrite. Retire this deviation if upstream moves the harness out of the app package or ships equivalent central screenshot tooling.
 
+#### Home screen Usage link
+
+- **Status:** Applied
+- **Patch branch:** `feat/home-usage-link`
+- **Upstream base:** `upstream/dev` / `097a93e511`
+- **Patch commit:** `30f2822654`
+- **Files:** `packages/app/src/home/projects/view.tsx`, `packages/app/src/home/projects/controller.tsx`, `packages/app/src/home/projects/region.tsx`, `packages/app/src/home/route.tsx`, `packages/app/src/runtime/i18n/*.ts` (63 dictionaries)
+- **Problem:** The local usage dashboard (out-of-tree at `/config/workspace/opencode2-usage`, served at `/usage/` through `opencode2-ui`) has no entry point in the app. The Home screen has no extension slot, so the built-in GUI extension SDK cannot contribute one.
+- **Fix:** Add a third `HomeUtilityNav` action after Help, using the `window-analytics` icon and opening `<origin>/usage/` through `platform.openExternal`. The action renders only when `platform.platform === "web"`, because the Electron build has no origin that serves the dashboard, and a dead button is worse than an absent one. `sidebar.usage` is added to every dictionary with the literal English `"Usage"`; no translations were invented, and the key parity across locales is preserved.
+- **Verification:** From `packages/app`, `bun typecheck` passes; the Home suite passes 25/25 with the package preloads, and the i18n suite 20/20; `bun run build` succeeds and the emitted `dist/_assets/index-*.js` contains both the handler and the button. Against the running stack, the cached Chromium in the container rendered the Home screen, found the `Usage` action with its icon, clicked it, and the popup opened `http://opencode2-ui/usage/?since=7d` where the dashboard rendered live data. `GET /usage` returns 301 to `/usage/`, `/usage/api/*` proxies to the `usage` sidecar, and `/` plus `/api` are unchanged.
+- **Deployment (outside this repository):** `/config/workspace/stacks/opencode2/compose.yaml` gains a read-only `usage` service running `web/server.ts` from `opencode2-usage`, and `/config/workspace/stacks/opencode2/ui.conf` gains the `/usage` redirect and `/usage/` proxy. Only `opencode2-ui` and `opencode2-usage` are recreated when these change; the main server is untouched.
+- **When updating:** Check whether upstream adds a Home-screen extension slot, a built-in usage view, or its own dashboard entry point. Retire this patch if any of those appear. If `HomeUtilityNav` is restructured, replay only the third action and keep the web-only guard.
+
 Before carrying any OC1 patch forward, verify the required behavior against this exact V2 base. In particular, test OpenAI OAuth availability for base `gpt-5.6` / Luna. If V2 already supports it, do not recreate the OC1 patch.
 
 ## Patch entry template
