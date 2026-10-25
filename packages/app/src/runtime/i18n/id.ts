@@ -501,6 +501,7 @@ export const dict = {
 
   "sidebar.settings": "Pengaturan",
   "sidebar.help": "Bantuan",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Sesi terbaru",
   "sidebar.project.clearNotifications": "Hapus notifikasi",
 

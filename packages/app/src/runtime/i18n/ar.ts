@@ -417,6 +417,7 @@ export const dict = {
   "common.key.esc": "ESC",
   "sidebar.settings": "الإعدادات",
   "sidebar.help": "مساعدة",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "الجلسات الأخيرة",
   "sidebar.project.clearNotifications": "مسح الإشعارات",
   "settings.section.server": "الخادم",

@@ -439,6 +439,7 @@ export const dict = {
   "common.time.daysAgo.short": "{{count}} өдрийн өмнө",
   "sidebar.settings": "Тохиргоо",
   "sidebar.help": "Туслаач",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Сүүлийн хуралдаанууд",
   "sidebar.project.clearNotifications": "Мэдэгдлийг арилгах",
   "settings.section.server": "Сервер",

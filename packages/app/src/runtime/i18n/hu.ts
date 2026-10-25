@@ -449,6 +449,7 @@ export const dict = {
   "common.time.daysAgo.short": "{{count}}d ezelőtt",
   "sidebar.settings": "Beállítások",
   "sidebar.help": "Segítség",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Legutóbbi munkamenetek",
   "sidebar.project.clearNotifications": "Értesítések törlése",
   "settings.section.server": "Kiszolgáló",

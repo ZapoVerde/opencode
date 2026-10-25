@@ -444,6 +444,7 @@ export const dict = {
   "common.time.daysAgo.short": "{{count}}d មុន។",
   "sidebar.settings": "ការកំណត់",
   "sidebar.help": "ជំនួយ",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "សម័យថ្មីៗ",
   "sidebar.project.clearNotifications": "ជម្រះការជូនដំណឹង",
   "settings.section.server": "ម៉ាស៊ីនមេ",

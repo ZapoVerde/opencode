@@ -446,6 +446,7 @@ export const dict = {
   "common.time.daysAgo.short": "{{count}}h lalu",
   "sidebar.settings": "Tetapan",
   "sidebar.help": "Bantuan",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Sesi terkini",
   "sidebar.project.clearNotifications": "Kosongkan notifikasi",
   "settings.section.server": "Pelayan",

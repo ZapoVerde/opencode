@@ -461,6 +461,7 @@ export const dict = {
   "common.time.daysAgo.short": "pred {{count}} d",
   "sidebar.settings": "Nastavenia",
   "sidebar.help": "Pomocník",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Nedávne relácie",
   "sidebar.project.clearNotifications": "Vymazať oznámenia",
   "settings.section.server": "Server",

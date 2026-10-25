@@ -461,6 +461,7 @@ export const dict = {
 
   "sidebar.settings": "การตั้งค่า",
   "sidebar.help": "ช่วยเหลือ",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "เซสชันล่าสุด",
   "sidebar.project.clearNotifications": "ล้างการแจ้งเตือน",
 

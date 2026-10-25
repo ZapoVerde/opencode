@@ -438,6 +438,7 @@ export const dict = {
   "common.time.daysAgo.short": "{{count}}օր առաջ",
   "sidebar.settings": "Կարգավորումներ",
   "sidebar.help": "Օգնություն",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Վերջին նիստերը",
   "sidebar.project.clearNotifications": "Մաքրել ծանուցումները",
   "settings.section.server": "Սերվեր",

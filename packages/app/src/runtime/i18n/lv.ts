@@ -439,6 +439,7 @@ export const dict = {
   "common.time.daysAgo.short": "pirms {{count}} d",
   "sidebar.settings": "Iestatījumi",
   "sidebar.help": "Palīdzība",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Nesenās sesijas",
   "sidebar.project.clearNotifications": "Notīrīt paziņojumus",
   "settings.section.server": "Serveris",

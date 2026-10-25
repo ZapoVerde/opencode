@@ -439,6 +439,7 @@ export const dict = {
   "common.time.daysAgo.short": "Fa {{count}} dies",
   "sidebar.settings": "Configuració",
   "sidebar.help": "Ajuda",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Sessions recents",
   "sidebar.project.clearNotifications": "Esborra les notificacions",
   "settings.section.server": "Servidor",

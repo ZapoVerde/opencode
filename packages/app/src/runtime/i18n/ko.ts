@@ -302,6 +302,7 @@ export const dict = {
   "common.key.esc": "ESC",
   "sidebar.settings": "설정",
   "sidebar.help": "도움말",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "최근 세션",
   "sidebar.project.clearNotifications": "알림 지우기",
   "settings.section.server": "서버",

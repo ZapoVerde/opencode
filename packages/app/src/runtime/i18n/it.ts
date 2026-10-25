@@ -600,6 +600,7 @@ export const dict = {
   "common.time.daysAgo.short": "{{count}}d fa",
   "sidebar.settings": "Impostazioni",
   "sidebar.help": "Aiuto",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Sessioni recenti",
   "sidebar.project.clearNotifications": "Cancella notifiche",
   "settings.section.server": "Server",

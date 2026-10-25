@@ -450,6 +450,7 @@ export const dict = {
 
   "sidebar.settings": "Настройки",
   "sidebar.help": "Помощь",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Недавние сессии",
   "sidebar.project.clearNotifications": "Очистить уведомления",
 

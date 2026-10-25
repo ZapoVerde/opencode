@@ -437,6 +437,7 @@ export const dict = {
   "common.time.daysAgo.short": "{{count}}დღის წინ",
   "sidebar.settings": "პარამეტრები",
   "sidebar.help": "დახმარება",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "ბოლო სესიები",
   "sidebar.project.clearNotifications": "შეტყობინებების გასუფთავება",
   "settings.section.server": "სერვერი",

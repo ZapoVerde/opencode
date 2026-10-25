@@ -643,6 +643,7 @@ export const dict = {
   "common.time.daysAgo.short": "{{count}}d sedan",
   "sidebar.settings": "Inställningar",
   "sidebar.help": "Hjälp",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Senaste sessioner",
   "sidebar.project.clearNotifications": "Rensa aviseringar",
   "settings.section.server": "Server",

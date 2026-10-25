@@ -609,6 +609,7 @@ export const dict = {
 
   "sidebar.settings": "Innstillinger",
   "sidebar.help": "Hjelp",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Nylige sesjoner",
   "sidebar.project.clearNotifications": "Fjern varsler",
 

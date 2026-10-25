@@ -76,6 +76,7 @@ export type HomeProjectsViewProps = {
   onCloseProject: (server: ServerConnection.Any, directory: string) => void
   onOpenSettings: () => void
   onOpenHelp: () => void
+  onOpenUsage: () => void
 }
 
 export function HomeProjectsView(props: HomeProjectsViewProps) {
@@ -304,6 +305,7 @@ function HomeProjectsPanel(props: HomeProjectsViewProps) {
         class="mb-8 mt-4 hidden shrink-0 lg:flex"
         onOpenSettings={props.onOpenSettings}
         onOpenHelp={props.onOpenHelp}
+        onOpenUsage={props.onOpenUsage}
         language={props.language}
       />
     </aside>
@@ -314,8 +316,11 @@ export function HomeUtilityNav(props: {
   class?: string
   onOpenSettings: () => void
   onOpenHelp: () => void
+  onOpenUsage: () => void
   language: ReturnType<typeof useLanguage>
 }) {
+  const platform = usePlatform()
+
   return (
     <div
       class={`${props.class ?? ""} min-w-0 flex-row justify-between gap-1 lg:flex-col lg:justify-start lg:pr-3 [&>button]:w-auto lg:[&>button]:w-full`}
@@ -336,6 +341,16 @@ export function HomeUtilityNav(props: {
         <Icon name="help" size="small" />
         <span class={HOME_PROJECT_NAV_LABEL}>{props.language.t("sidebar.help")}</span>
       </HomeProjectNavButton>
+      <Show when={platform.platform === "web"}>
+        <HomeProjectNavButton
+          type="button"
+          class="text-v2-text-text-faint [&>[data-slot=icon-svg]]:text-v2-icon-icon-muted"
+          onClick={props.onOpenUsage}
+        >
+          <Icon name="window-analytics" size="small" />
+          <span class={HOME_PROJECT_NAV_LABEL}>{props.language.t("sidebar.usage")}</span>
+        </HomeProjectNavButton>
+      </Show>
     </div>
   )
 }

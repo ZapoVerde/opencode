@@ -453,6 +453,7 @@ export const dict = {
   "common.time.daysAgo.short": "{{count}} ngày trước",
   "sidebar.settings": "Cài đặt",
   "sidebar.help": "Trợ giúp",
+  "sidebar.usage": "Usage",
   "sidebar.project.recentSessions": "Phiên gần đây",
   "sidebar.project.clearNotifications": "Xóa thông báo",
   "settings.section.server": "Máy chủ",
