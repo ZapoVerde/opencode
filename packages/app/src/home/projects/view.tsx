@@ -333,14 +333,6 @@ export function HomeUtilityNav(props: {
         <Icon name="settings-gear" size="small" />
         <span class={HOME_PROJECT_NAV_LABEL}>{props.language.t("sidebar.settings")}</span>
       </HomeProjectNavButton>
-      <HomeProjectNavButton
-        type="button"
-        class="text-v2-text-text-faint [&>[data-slot=icon-svg]]:text-v2-icon-icon-muted"
-        onClick={props.onOpenHelp}
-      >
-        <Icon name="help" size="small" />
-        <span class={HOME_PROJECT_NAV_LABEL}>{props.language.t("sidebar.help")}</span>
-      </HomeProjectNavButton>
       <Show when={platform.platform === "web"}>
         <HomeProjectNavButton
           type="button"
@@ -351,6 +343,14 @@ export function HomeUtilityNav(props: {
           <span class={HOME_PROJECT_NAV_LABEL}>{props.language.t("sidebar.usage")}</span>
         </HomeProjectNavButton>
       </Show>
+      <HomeProjectNavButton
+        type="button"
+        class="text-v2-text-text-faint [&>[data-slot=icon-svg]]:text-v2-icon-icon-muted"
+        onClick={props.onOpenHelp}
+      >
+        <Icon name="help" size="small" />
+        <span class={HOME_PROJECT_NAV_LABEL}>{props.language.t("sidebar.help")}</span>
+      </HomeProjectNavButton>
     </div>
   )
 }

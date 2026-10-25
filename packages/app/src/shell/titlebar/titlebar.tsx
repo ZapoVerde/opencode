@@ -659,6 +659,20 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
                                 <Icon name="settings-gear" size="small" />
                                 {language.t("sidebar.settings")}
                               </button>
+                              <Show when={platform.platform === "web"}>
+                                <button
+                                  type="button"
+                                  data-action="mobile-tabs-usage"
+                                  class="flex h-11 shrink-0 items-center gap-2 rounded-[6px] px-2 text-[13px] leading-4 text-v2-text-text-faint hover:bg-v2-background-bg-layer-02 focus-visible:outline-none focus-visible:bg-v2-background-bg-layer-02"
+                                  onClick={() => {
+                                    setMobileTabs("open", false)
+                                    platform.openExternal(new URL("/usage/", window.location.origin).href)
+                                  }}
+                                >
+                                  <Icon name="window-analytics" size="small" />
+                                  {language.t("sidebar.usage")}
+                                </button>
+                              </Show>
                               <button
                                 type="button"
                                 data-action="mobile-tabs-help"
