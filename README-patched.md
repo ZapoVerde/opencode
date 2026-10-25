@@ -41,6 +41,10 @@ V2 is moving quickly. Treat an update as a fresh upstream base, not as permissio
 - `origin`: `https://github.com/ZapoVerde/opencode.git` — persistent local patch/integration branches
 - `upstream`: `https://github.com/anomalyco/opencode.git` — authoritative OpenCode source
 
+## Toolchain
+
+`package.json` pins `packageManager: bun@1.4.4`, and the local `typecheck` scripts use the `bun check` builtin. The image's `/usr/local/bin/bun` is 1.4.2 and root-owned, so the workspace keeps 1.4.4 at `/config/workspace/.tools/bin/bun`; that directory precedes `/usr/local/bin` on `PATH` here and in the OC2 container, so plain `bun` resolves to 1.4.4 in both. Run `bun install` after dependency changes and keep `bun install --frozen-lockfile` clean, since the container installs with it at startup.
+
 ## Source-run identity
 
 The OC2 stack runs `packages/cli/src/index.ts` directly, rather than a release-built CLI. In that mode the compile-time version constants are absent, so `packages/cli/src/version.ts` falls back to `local`. The OpenCode Console uses the server's User-Agent to identify the client; a `local` version can therefore fail the Zen free-model client check even when the account is connected.
