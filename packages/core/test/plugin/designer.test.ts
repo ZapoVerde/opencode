@@ -1,5 +1,5 @@
 import { describe, expect } from "bun:test"
-import type { SystemPart } from "@opencode/ai"
+import type { SystemPart } from "@opencode/ai/effect"
 import type { SessionContext } from "@opencode/plugin/effect/session"
 import { Agent } from "@opencode/core/agent"
 import { DesignerPlugin, PROMPT_DESIGNER, designer } from "@opencode/core/plugin/designer"

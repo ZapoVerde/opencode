@@ -1,6 +1,6 @@
 export * as DesignerPlugin from "./designer.js"
 
-import { SystemPart } from "@opencode/ai"
+import { SystemPart } from "@opencode/ai/effect"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Agent } from "@opencode/schema/agent"
 import { Effect } from "effect"
