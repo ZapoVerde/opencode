@@ -8,8 +8,7 @@ test.use({ serviceWorkers: "block" })
 test("home", async ({ page }) => {
   await mockStressTimeline(page)
   await seed(page, {
-    projects: { local: [{ worktree: fixture.directory, expanded: true }] },
-    lastProject: { local: fixture.directory },
+    usedProjects: { local: [fixture.project.id] },
   })
 
   await page.goto("/")

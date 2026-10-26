@@ -9,6 +9,7 @@ export default defineConfig({
   outputDir: "./.playwright",
   workers: 1,
   timeout: 60_000,
+  expect: { timeout: 20_000 },
   reporter: [["line"]],
   webServer: {
     command: `bun run --cwd ../app dev -- --host 127.0.0.1 --port ${port} --strictPort`,

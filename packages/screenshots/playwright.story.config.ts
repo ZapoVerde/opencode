@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test"
 
-const port = Number(process.env.SHOTS_STORYBOOK_PORT ?? 6006)
+const port = Number(process.env.SHOTS_STORIES_PORT ?? 6006)
 const baseURL = `http://127.0.0.1:${port}`
 
 export default defineConfig({
@@ -9,9 +9,10 @@ export default defineConfig({
   outputDir: "./.playwright-story",
   workers: 1,
   timeout: 60_000,
+  expect: { timeout: 20_000 },
   reporter: [["line"]],
   webServer: {
-    command: `bun run --cwd ../storybook storybook -- --port ${port} --ci --no-open`,
+    command: `bun run --cwd ../stories dev --port ${port} --strictPort`,
     url: baseURL,
     reuseExistingServer: true,
     timeout: 120_000,

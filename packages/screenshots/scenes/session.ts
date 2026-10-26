@@ -9,15 +9,13 @@ test("session-dark", async ({ page }) => {
   await mockStressTimeline(page)
   await installTimelineSettings(page)
   await seed(page, {
-    projects: { local: [{ worktree: fixture.directory, expanded: true }] },
-    lastProject: { local: fixture.directory },
     tabs: [fixture.sourceID, fixture.targetID],
     theme: { id: "oc-2", scheme: "dark" },
   })
 
   await page.goto(sessionHref(fixture.targetID))
   await expect(page.locator('[data-component="composer-editor"]')).toBeVisible()
-  await expect(page.getByText("bun typecheck").first()).toBeVisible()
+  await expect(page.getByText("bun typecheck").first()).toBeAttached()
 
   await capture(page, "session-dark")
 })

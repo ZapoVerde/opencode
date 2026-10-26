@@ -9,19 +9,19 @@ test("session-mobile", async ({ page }) => {
   await mockStressTimeline(page)
   await installTimelineSettings(page)
   await seed(page, {
-    projects: { local: [{ worktree: fixture.directory, expanded: true }] },
-    lastProject: { local: fixture.directory },
+    usedProjects: { local: [fixture.project.id] },
     tabs: [fixture.sourceID, fixture.targetID],
     theme: { id: "oc-2", scheme: "dark" },
   })
 
   await page.goto(sessionHref(fixture.targetID))
-  await expect(page.locator('[data-component="composer-editor"]')).toBeVisible()
+  await expect(page.locator('[data-slot="session-mobile-view-navigation"]')).toBeVisible()
   await expect(
     page.locator(
       `[data-timeline-row="UserMessage"][data-message-id="${fixture.expected.targetMessageIDs.at(-1)}"]`,
     ),
   ).toBeVisible()
+  await expect(page.getByRole("textbox", { name: "Prompt", exact: true })).toBeVisible()
 
   await capture(page, "session-mobile")
 })

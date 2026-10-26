@@ -13,7 +13,7 @@
   },
   "devDependencies": {
     "@opencode/app-harness": "workspace:*",
-    "@opencode/storybook": "workspace:*",
+    "@opencode/stories": "workspace:*",
     "@playwright/test": "catalog:",
     "@tsconfig/node22": "catalog:",
     "@types/bun": "catalog:",

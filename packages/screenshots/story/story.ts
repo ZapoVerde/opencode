@@ -1,4 +1,4 @@
-import { story } from "@opencode/storybook/playwright/story"
+import { story } from "@opencode/stories/playwright/story"
 import { capture } from "../src/shot"
 
 const id = process.env.SHOTS_STORY_ID

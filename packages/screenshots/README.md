@@ -23,8 +23,12 @@ Run a single scene with Playwright's `--grep`:
 bun run shots -- --grep "session-dark"
 ```
 
-The story command mounts a Storybook story and captures it. Example ID:
-`current-session-error-card--provider-errors`.
+The story command mounts a story on the shared story server in `packages/stories` and captures it. Example ID:
+`current-session-error-card--provider-errors`. Story ids are the story file's meta `id` (or kebab-cased `title`)
+followed by `--` and the kebab-cased export, as `packages/stories` names them.
+
+To browse stories, run `bun run dev:stories` and open `http://127.0.0.1:6006/?id=<id>`, or use the components
+lab at `/components` in a dev build of the app.
 
 ## Output
 
@@ -35,7 +39,7 @@ repository:
 SHOTS_DIR=/tmp/opencode/shots bun run shots
 ```
 
-`SHOTS_NAME` overrides the file name of a story capture. `SHOTS_APP_PORT` and `SHOTS_STORYBOOK_PORT` choose the
+`SHOTS_NAME` overrides the file name of a story capture. `SHOTS_APP_PORT` and `SHOTS_STORIES_PORT` choose the
 dev server ports (defaults `4455` and `6006`).
 
 ## Adding a scene
@@ -56,10 +60,7 @@ test.use({ serviceWorkers: "block" })
 
 test("home", async ({ page }) => {
   await mockStressTimeline(page)
-  await seed(page, {
-    projects: { local: [{ worktree: fixture.directory, expanded: true }] },
-    lastProject: { local: fixture.directory },
-  })
+  await seed(page, { usedProjects: { local: [fixture.project.id] } })
 
   await page.goto("/")
   await expect(page.locator('[data-component="home-session-row"]').first()).toBeVisible()
@@ -70,10 +71,10 @@ test("home", async ({ page }) => {
 
 ## Container note
 
-If the local dev server hits the inotify limit, set `CHOKIDAR_USEPOLLING=true`. The Storybook server watches
-with Watchpack, so it also needs `WATCHPACK_POLLING=true`:
+If the local dev server hits the inotify limit, set `CHOKIDAR_USEPOLLING=true`. Both the app and the story
+server watch through Vite:
 
 ```sh
-CHOKIDAR_USEPOLLING=true WATCHPACK_POLLING=true SHOTS_STORY_ID=<id> bun run shots:story
+CHOKIDAR_USEPOLLING=true SHOTS_STORY_ID=<id> bun run shots:story
 ```
 
