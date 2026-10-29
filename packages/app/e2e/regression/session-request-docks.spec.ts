@@ -173,6 +173,7 @@ test("replies with predefined choices and the edited custom multiselect answer",
 
 test("shows a pending permission dock", async ({ page }) => {
   const replies: { sessionID: string; permissionID: string; body: unknown }[] = []
+  const longCommand = `npm publish ${"0123456789abcdef".repeat(400)}`
   await mockServer(page, {
     onPermissionReply: (reply) => replies.push(reply),
     sessionPermissions: {
@@ -181,7 +182,7 @@ test("shows a pending permission dock", async ({ page }) => {
           id: "permission-request",
           sessionID,
           permission: "shell",
-          patterns: ["git status", "git diff"],
+          patterns: ["git status", "git diff", longCommand],
           metadata: {},
           always: [],
         },
@@ -193,14 +194,38 @@ test("shows a pending permission dock", async ({ page }) => {
   await expectSessionTitle(page, title)
 
   const permission = page.locator('[data-component="dock-prompt"][data-kind="permission"]')
+  const patterns = permission.locator('[data-slot="permission-patterns"]')
+  const allowOnce = permission.getByRole("button", { name: "Allow once" })
   await expect(permission).toBeVisible()
   await expect(permission.getByText("git status")).toBeVisible()
   await expect(permission.getByText("git diff")).toBeVisible()
-  await expect(permission.locator('[data-slot="permission-footer-actions"] button')).toHaveCount(3)
+  await expect(patterns.locator("code")).toHaveCount(3)
+  await expect(permission.locator('[data-slot="permission-actions"] button')).toHaveCount(3)
   await expect(page.locator('[data-component="composer"]')).toHaveCount(0)
 
+  // A long command must not push the decisions past the visible area, so they stay above the scrollable list.
+  await expect(allowOnce).toBeInViewport({ ratio: 1 })
+  await expect
+    .poll(() =>
+      permission.evaluate((dock) => {
+        const actions = dock.querySelector('[data-slot="permission-actions"]')
+        const patterns = dock.querySelector('[data-slot="permission-patterns"]')
+
+        if (!(actions instanceof HTMLElement) || !(patterns instanceof HTMLElement)) return false
+
+        return actions.getBoundingClientRect().bottom <= patterns.getBoundingClientRect().top
+      }),
+    )
+    .toBe(true)
+  await expect.poll(() => patterns.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true)
+
+  // The reported case: a phone-sized viewport where the command wraps for far more lines than fit.
+  await page.setViewportSize({ width: 390, height: 664 })
+  await expect(allowOnce).toBeInViewport({ ratio: 1 })
+  await expect.poll(() => patterns.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true)
+
   const reply = page.waitForResponse((response) => response.request().method() === "POST")
-  await permission.getByRole("button", { name: "Allow once" }).click()
+  await allowOnce.click()
   const response = await reply
   expect(new URL(response.url()).pathname).toBe(`/api/session/${sessionID}/permission/permission-request/reply`)
   expect(response.request().postDataJSON()).toEqual({ decision: "once" })
@@ -208,6 +233,41 @@ test("shows a pending permission dock", async ({ page }) => {
   expect(replies).toEqual([{ sessionID, permissionID: "permission-request", body: { decision: "once" } }])
   await expect(permission).toHaveCount(0)
   await expect(page.locator('[data-component="composer"]')).toBeVisible()
+})
+
+test("surfaces the decisions when a long permission request arrives over the composer", async ({ page }) => {
+  const sessionPermissions: Record<string, unknown[]> = { [sessionID]: [] }
+  const workspace = await mockServer(page, { sessionPermissions })
+  await page.setViewportSize({ width: 390, height: 664 })
+  await page.goto(sessionHref(sessionID))
+  await expectSessionTitle(page, title)
+  await expect(page.locator('[data-component="composer"]')).toBeVisible()
+  await page.locator('[data-component="composer-editor"][contenteditable="true"]').fill("summarize the changes")
+
+  const longCommand = `npm publish ${"0123456789abcdef".repeat(400)}`
+  sessionPermissions[sessionID]!.push({
+    id: "permission-long",
+    sessionID,
+    permission: "shell",
+    patterns: [longCommand],
+    metadata: {},
+    always: [],
+  })
+  await workspace.push([
+    {
+      id: "evt_permission_asked_long",
+      created: 1700000000000,
+      type: "permission.asked",
+      location: { directory },
+      data: { id: "permission-long", sessionID, action: "shell", resources: [longCommand] },
+    },
+  ])
+
+  const permission = page.locator('[data-component="dock-prompt"][data-kind="permission"]')
+  const patterns = permission.locator('[data-slot="permission-patterns"]')
+  await expect(permission).toBeVisible()
+  await expect(permission.getByRole("button", { name: "Allow once" })).toBeInViewport({ ratio: 1 })
+  await expect.poll(() => patterns.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true)
 })
 
 test("loads a running subagent's question without polling idle subagents on every update", async ({ page }) => {

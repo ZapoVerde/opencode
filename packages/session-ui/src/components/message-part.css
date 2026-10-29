@@ -1327,7 +1327,7 @@
 }
 
 [data-component="dock-prompt"][data-kind="permission"] {
-  max-height: 100dvh;
+  max-height: var(--permission-prompt-max-height, 100dvh);
 
   [data-slot="permission-body"] {
     display: flex;
@@ -1335,11 +1335,35 @@
     gap: 16px;
     flex: 1;
     min-height: 0;
-    padding: 12px 12px 0;
+    padding: 12px;
   }
 
   [data-slot="permission-header"] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
     padding: 0;
+  }
+
+  [data-slot="permission-header"] > [data-slot="permission-row"] {
+    flex: 1 1 12rem;
+    min-width: 0;
+  }
+
+  [data-slot="permission-actions"] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex: 0 0 auto;
+    margin-inline-start: auto;
+
+    [data-component="button-v2"] {
+      padding-left: 12px;
+      padding-right: 12px;
+    }
   }
 
   [data-slot="permission-row"] {
@@ -1389,12 +1413,21 @@
     padding: 0;
   }
 
+  [data-slot="permission-row"][data-variant="patterns"] {
+    /* Takes the remaining height so the long resource list scrolls inside the dock instead of growing it. */
+    flex: 1 1 auto;
+    min-height: 0;
+    grid-template-columns: 20px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+    overflow: hidden;
+  }
+
   [data-slot="permission-patterns"] {
     display: flex;
     flex-direction: column;
     gap: 6px;
     margin-top: 8px;
-    margin-bottom: 16px;
     padding: 1px 0 8px;
     flex: 1;
     min-height: 0;
@@ -1412,25 +1445,6 @@
       font-weight: 440;
       line-height: var(--line-height-base);
       letter-spacing: -0.04px;
-    }
-  }
-
-  [data-slot="permission-footer"] {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0;
-    padding: 8px;
-  }
-
-  [data-slot="permission-footer-actions"] {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    [data-component="button-v2"] {
-      padding-left: 12px;
-      padding-right: 12px;
     }
   }
 }
