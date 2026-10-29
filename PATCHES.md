@@ -175,6 +175,18 @@ Upstream still does not address any active patch as of `fa5b4bd618`: there is no
 - **Deployment (outside this repository):** `/config/workspace/stacks/opencode2/compose.yaml` gains a read-only `usage` service running `web/server.ts` from `opencode2-usage`, and `/config/workspace/stacks/opencode2/ui.conf` gains the `/usage` redirect and `/usage/` proxy. Only `opencode2-ui` and `opencode2-usage` are recreated when these change; the main server is untouched.
 - **When updating:** Check whether upstream adds a Home-screen extension slot, a built-in usage view, or its own dashboard entry point. Retire this patch if any of those appear. If `HomeUtilityNav` is restructured, replay only the third action and keep the web-only guard.
 
+#### Permission decisions stay reachable for long commands
+
+- **Status:** Applied
+- **Patch branch:** `fix/permission-actions-top-v2`
+- **Upstream base:** `upstream/dev` / `fa5b4bd618`
+- **Patch commit:** `0422e56f21`
+- **Files:** `packages/app/src/session/requests/session-permission-dock.tsx`, `packages/session-ui/src/components/dock-prompt.tsx`, `packages/session-ui/src/components/dock-prompt.stories.tsx`, `packages/session-ui/src/components/message-part.css`, `packages/app/e2e/regression/session-request-docks.spec.ts`
+- **Problem:** A permission request carrying a long command grows the dock past the visible pane. The decisions sat in the footer, so on a phone-sized viewport the Allow/Deny buttons were clipped while the command list monopolized the height.
+- **Fix:** Publish the decisions in the dock header, measure the space between the composer dock and the chat pane to cap the prompt through `--permission-prompt-max-height`, and let the pattern list scroll inside that cap. The cap has a 160px floor and re-measures on window resize, visual-viewport changes, and dock growth. The added e2e case covers a 6,412-character command at the default and 390x664 viewports.
+- **Verification:** From `packages/app` and `packages/session-ui`, `bun typecheck` passes; `bun run test:e2e -- e2e/regression/session-request-docks.spec.ts --workers=1` passes 6/6 on both the patch branch and after cherry-picking onto `opencode2-v2-patched`, including the long-command and phone-viewport assertions.
+- **When updating:** Check whether upstream pins dock decisions in a header or caps dock height against the pane; retire this patch if both are handled upstream.
+
 Before carrying any OC1 patch forward, verify the required behavior against this exact V2 base. In particular, test OpenAI OAuth availability for base `gpt-5.6` / Luna. If V2 already supports it, do not recreate the OC1 patch.
 
 ## Patch entry template
