@@ -50,16 +50,18 @@ export const Permission = {
   render: () => (
     <DockPrompt
       kind="permission"
-      header={<div class="text-13-medium text-text-strong">Permission required</div>}
-      footer={
-        <>
-          <Button size="normal" variant="ghost">
-            Deny
-          </Button>
-          <Button size="normal" variant="contrast">
-            Allow once
-          </Button>
-        </>
+      header={
+        <div class="flex w-full flex-wrap items-center justify-between gap-2">
+          <div class="text-13-medium text-text-strong">Permission required</div>
+          <div class="flex items-center gap-2">
+            <Button size="normal" variant="ghost">
+              Deny
+            </Button>
+            <Button size="normal" variant="contrast">
+              Allow once
+            </Button>
+          </div>
+        </div>
       }
     >
       <code class="text-12-regular text-text-base">npm publish --tag canary</code>

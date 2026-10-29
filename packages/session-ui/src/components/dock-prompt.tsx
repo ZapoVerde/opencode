@@ -4,7 +4,7 @@ export function DockPrompt(props: {
   kind: "question" | "permission"
   header: JSX.Element
   children: JSX.Element
-  footer: JSX.Element
+  footer?: JSX.Element
   ref?: (el: HTMLDivElement) => void
   onKeyDown?: JSX.EventHandlerUnion<HTMLDivElement, KeyboardEvent>
 }) {
@@ -16,7 +16,7 @@ export function DockPrompt(props: {
         <div data-slot={slot("header")}>{props.header}</div>
         <div data-slot={slot("content")}>{props.children}</div>
       </div>
-      <div data-slot={slot("footer")}>{props.footer}</div>
+      {props.footer === undefined ? null : <div data-slot={slot("footer")}>{props.footer}</div>}
     </div>
   )
 }
