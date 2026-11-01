@@ -1,4 +1,4 @@
-import { For, Show, onCleanup, onMount } from "solid-js"
+import { For, Show, createResource, onCleanup, onMount } from "solid-js"
 import type { PermissionRequest } from "@opencode/client/promise"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
 import { makeEventListener } from "@solid-primitives/event-listener"
@@ -6,22 +6,27 @@ import { Button } from "@opencode/ui/button"
 import { DockPrompt } from "@opencode/session-ui/dock-prompt"
 import { Icon } from "@opencode/ui/icon"
 import { useLanguage } from "@/runtime/i18n/language"
+import { describePermission } from "./permission-description"
+
+type PermissionAgent = { id: string; name: string; remit?: string }
 
 export function SessionPermissionDock(props: {
   request: PermissionRequest
   responding: boolean
-  onDecide: (response: "once" | "always" | "reject") => void
+  agent?: PermissionAgent
+  agents?: readonly PermissionAgent[]
+  onDecide: (response: "once" | "session" | "always" | "reject", message?: string) => void
+  onRoute?: (agent: string) => void
+  review?: (request: PermissionRequest) => Promise<string>
 }) {
   const language = useLanguage()
-
-  const toolDescription = () => {
-    const key = `settings.permissions.tool.${props.request.action}.description`
-    const value = language.t(key as Parameters<typeof language.t>[0])
-
-    if (value === key) return ""
-
-    return value
-  }
+  const description = () => describePermission(props.request, props.agent?.id)
+  const t = (key: string) => language.t(key as Parameters<typeof language.t>[0])
+  const [review] = createResource(
+    () => (props.review && !props.request.message ? props.request.id : undefined),
+    () => props.review?.(props.request) ?? Promise.resolve(""),
+  )
+  const reviewText = () => (review() ?? props.request.message ?? "").trim().slice(0, 1200)
 
   let root: HTMLDivElement | undefined
   let measuring: number | undefined
@@ -40,7 +45,10 @@ export function SessionPermissionDock(props: {
     // region's bottom and padding are fixed, so measure those instead of reading the dock back mid-animation.
     const inset = Number.parseFloat(getComputedStyle(region).paddingBottom) || 0
     const available = region.getBoundingClientRect().bottom - inset - pane.getBoundingClientRect().top
-    root.style.setProperty("--permission-prompt-max-height", `${Math.max(160, Math.floor(available))}px`)
+    // On a phone the request should not become the whole screen: keep part of the conversation visible above it
+    // while the decision is considered. The dock's content scrolls inside this cap.
+    const cap = window.innerWidth <= 767 ? pane.getBoundingClientRect().height * 0.62 : available
+    root.style.setProperty("--permission-prompt-max-height", `${Math.max(140, Math.floor(Math.min(available, cap)))}px`)
   }
 
   const requestMeasure = () => {
@@ -67,8 +75,17 @@ export function SessionPermissionDock(props: {
     })
   })
 
-  // The decisions sit in the header, not the footer: a request carrying a long command can grow the dock past the
-  // visible area on a phone, and the top of the dock is the part that stays reachable.
+  const route = () => {
+    const target = description().target
+    if (!target || !props.onRoute) return
+    const agent = props.agents?.find((item) => item.id === target.agent)
+    if (props.agents && !agent) return
+    return {
+      ...target,
+      name: agent?.name ?? target.agent[0].toUpperCase() + target.agent.slice(1),
+    }
+  }
+
   return (
     <DockPrompt
       kind="permission"
@@ -79,19 +96,15 @@ export function SessionPermissionDock(props: {
             <span data-slot="permission-icon">
               <Icon name="warning" size="normal" />
             </span>
-            <div data-slot="permission-header-title">{language.t("notification.permission.title")}</div>
+            <div data-slot="permission-header-title">
+              {props.agent
+                ? language.t("permission.title.outside", { agent: props.agent.name })
+                : language.t("notification.permission.title")}
+            </div>
           </div>
           <div data-slot="permission-actions">
             <Button variant="ghost" size="normal" onClick={() => props.onDecide("reject")} disabled={props.responding}>
               {language.t("ui.permission.deny")}
-            </Button>
-            <Button
-              variant="neutral"
-              size="normal"
-              onClick={() => props.onDecide("always")}
-              disabled={props.responding}
-            >
-              {language.t("ui.permission.allowAlways")}
             </Button>
             <Button variant="submit" size="normal" onClick={() => props.onDecide("once")} disabled={props.responding}>
               {language.t("ui.permission.allowOnce")}
@@ -100,17 +113,65 @@ export function SessionPermissionDock(props: {
         </>
       }
     >
-      <Show when={toolDescription()}>
-        <div data-slot="permission-row">
-          <span data-slot="permission-spacer" aria-hidden="true" />
-          <div data-slot="permission-hint">{toolDescription()}</div>
+      <div data-slot="permission-row">
+        <span data-slot="permission-spacer" aria-hidden="true" />
+        <div data-slot="permission-summary">
+          <div data-slot="permission-hint">{t(description().summary)}</div>
+          <Show when={description().consequence}>
+            {(key) => <div data-slot="permission-consequence">{t(key())}</div>}
+          </Show>
+          <Show when={reviewText() || review.loading || review.error}>
+            <div data-slot="permission-review">
+              <div data-slot="permission-review-title">{language.t("permission.reviewer")}</div>
+              <div data-slot="permission-review-text">
+                {reviewText() ||
+                  (review.loading
+                    ? language.t("permission.reviewer.loading")
+                    : language.t("permission.reviewer.unavailable"))}
+              </div>
+            </div>
+          </Show>
+          <Show when={props.agent?.remit}>
+            {(remit) => (
+              <div data-slot="permission-remit">
+                {language.t("permission.remit", { remit: remit(), agent: props.agent?.name ?? "" })}
+              </div>
+            )}
+          </Show>
+          <Show when={route()}>
+            {(target) => (
+              <div data-slot="permission-route">
+                <div>
+                  {language.t("permission.route.title", { agent: target().name })}
+                  <span> {t(target().reason)}</span>
+                </div>
+                <Button variant="neutral" size="normal" onClick={() => props.onRoute?.(target().agent)}>
+                  {language.t("permission.route.switch", { agent: target().name })}
+                </Button>
+              </div>
+            )}
+          </Show>
+          <Show when={props.request.scope}>
+            {(scope) => (
+              <Button
+                variant="neutral"
+                size="normal"
+                class="w-full"
+                onClick={() => props.onDecide("session")}
+                disabled={props.responding}
+              >
+                {language.t("permission.allowScope", { scope: scope().label })}
+              </Button>
+            )}
+          </Show>
         </div>
-      </Show>
+      </div>
 
       <Show when={props.request.resources.length > 0}>
         <div data-slot="permission-row" data-variant="patterns">
           <span data-slot="permission-spacer" aria-hidden="true" />
           <div data-slot="permission-patterns">
+            <div data-slot="permission-details-label">{language.t("permission.details")}</div>
             <For each={props.request.resources}>
               {(pattern) => <code class="text-text-base break-all">{pattern}</code>}
             </For>

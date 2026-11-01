@@ -12,6 +12,7 @@ import { PermissionSaved } from "@opencode/core/permission/saved"
 import { Project } from "@opencode/core/project"
 import { ProjectTable } from "@opencode/core/project/sql"
 import { AbsolutePath } from "@opencode/core/schema"
+import { SessionEvent } from "@opencode/schema/session-event"
 import { Session } from "@opencode/core/session"
 import { SessionTable } from "@opencode/core/session/sql"
 import { SessionStore } from "@opencode/core/session/store"
@@ -370,6 +371,112 @@ describe("Permission", () => {
       yield* service.assert(assertion({ id: Permission.ID.create("per_next"), resources: ["src/next.ts"] }))
       yield* saved.remove(id)
       expect(yield* saved.list()).toEqual([])
+    }),
+  )
+
+  it.effect("keeps session approvals in memory and scoped to the session", () =>
+    Effect.gen(function* () {
+      yield* setup()
+      yield* setup([], Session.ID.make("ses_other"))
+      const service = yield* Permission.Service
+      const selected = yield* waitForRequest({
+        action: "shell",
+        resources: ["git status --porcelain"],
+        save: ["git status *"],
+      })
+      yield* service.reply({ requestID: selected.request.id, reply: "session" })
+      yield* Fiber.join(selected.fiber)
+
+      expect(
+        yield* service.ask(
+          assertion({
+            id: Permission.ID.create("per_same"),
+            action: "shell",
+            resources: ["git status -s"],
+          }),
+        ),
+      ).toMatchObject({ effect: "allow" })
+      const other = yield* service.ask(
+        assertion({
+          id: Permission.ID.create("per_other"),
+          sessionID: Session.ID.make("ses_other"),
+          action: "shell",
+          resources: ["git status -s"],
+        }),
+      )
+      expect(other).toMatchObject({ effect: "ask" })
+      yield* service.reply({ requestID: other.id, reply: "reject" })
+
+      // Session approvals are not project saved rules.
+      const { db } = yield* Database.Service
+      expect(yield* db.select().from(PermissionTable).all()).toEqual([])
+    }),
+  )
+
+  it.effect("expires session approvals when the agent switches", () =>
+    Effect.gen(function* () {
+      yield* setup()
+      const service = yield* Permission.Service
+      const bus = yield* Bus.Service
+      const selected = yield* waitForRequest({
+        action: "shell",
+        resources: ["git status --porcelain"],
+        save: ["git status *"],
+      })
+      yield* service.reply({ requestID: selected.request.id, reply: "session" })
+      yield* Fiber.join(selected.fiber)
+
+      expect(
+        yield* service.ask(
+          assertion({
+            id: Permission.ID.create("per_same_agent"),
+            action: "shell",
+            resources: ["git status -s"],
+          }),
+        ),
+      ).toMatchObject({ effect: "allow" })
+
+      yield* bus.publish(SessionEvent.AgentSelected, {
+        sessionID: Session.ID.make("ses_test"),
+        agent: Agent.ID.make("other"),
+        previous: Agent.ID.make("test"),
+      })
+
+      const next = yield* service.ask(
+        assertion({
+          id: Permission.ID.create("per_new_agent"),
+          action: "shell",
+          resources: ["git status -s"],
+        }),
+      )
+      expect(next).toMatchObject({ effect: "ask" })
+      yield* service.reply({ requestID: next.id, reply: "reject" })
+    }),
+  )
+
+  it.effect("does not let a session approval override an agent deny", () =>
+    Effect.gen(function* () {
+      yield* setup()
+      const service = yield* Permission.Service
+      const selected = yield* waitForRequest({
+        action: "shell",
+        resources: ["git status --porcelain"],
+        save: ["git status *"],
+      })
+      yield* service.reply({ requestID: selected.request.id, reply: "session" })
+      yield* Fiber.join(selected.fiber)
+
+      yield* setRules([{ action: "shell", resource: "*", effect: "deny" }])
+      const blocked = yield* service
+        .assert(
+          assertion({
+            id: Permission.ID.create("per_denied"),
+            action: "shell",
+            resources: ["git status -s"],
+          }),
+        )
+        .pipe(Effect.flip)
+      expect(blocked).toBeInstanceOf(Permission.BlockedError)
     }),
   )
 

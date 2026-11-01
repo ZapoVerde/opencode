@@ -431,11 +431,17 @@ export function ComposerEditor(props: ComposerEditorProps) {
             <div ref={controlsContent} class="flex h-full w-max min-w-full items-center gap-0.5">
               <Show when={view.agent} keyed>
                 {(control) => (
-                  <ComposerEditorConfiguredSelect
-                    title={i18n.t("ui.promptInput.chooseAgent")}
-                    keybind={["Mod", "."]}
-                    control={control}
-                  />
+                  <Tooltip
+                    value={control.description?.()}
+                    placement="top"
+                    contentClass="max-w-72 whitespace-normal"
+                  >
+                    <ComposerEditorConfiguredSelect
+                      title={i18n.t("ui.promptInput.chooseAgent")}
+                      keybind={["Mod", "."]}
+                      control={control}
+                    />
+                  </Tooltip>
                 )}
               </Show>
               <Show when={props.modelControlsVisible ?? true}>

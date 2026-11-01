@@ -1,3 +1,4 @@
+import type { PermissionRequest } from "@opencode/client/promise"
 import type { SessionUserActions } from "@opencode/session-ui/message"
 import { getFilename, sameDirectory } from "@opencode/util/path"
 import { useDialog } from "@opencode/ui/context/dialog"
@@ -44,6 +45,7 @@ import { composerProviderName } from "@/composer/selection"
 import { useProviders } from "@/providers/catalog/providers"
 import { SubagentBar } from "./subagent-bar"
 import { createSessionRequestModel } from "../requests/model"
+import { permissionReviewPrompt } from "../requests/permission-review"
 import type { Region } from "@/runtime/extension/panels"
 import { SessionLocationMissing } from "./location-missing"
 
@@ -290,6 +292,36 @@ export function createActiveSessionRegion(input: {
     },
   ])
 
+  const permissionAgents = createMemo(() => data.location.agent.list({ directory: location().directory }) ?? [])
+  const permissionAgent = createMemo(() => {
+    const id = input.session.data.info()?.agent
+    return permissionAgents().find((agent) => agent.id === id || agent.name === id)
+  })
+  const reviewPermission = (request: PermissionRequest) =>
+    server.api.session
+      .generate({
+        sessionID: request.sessionID,
+        prompt: permissionReviewPrompt(request, permissionAgent()),
+      })
+      .then((result) => result.text)
+
+  const routePermission = (agent: string) => {
+    const sessionID = input.session.identity.sessionID()
+    if (!sessionID) return
+    const target = permissionAgents().find((item) => item.id === agent)
+    input.timeline.actions.resume()
+    state.decide("reject", language.t("permission.route.rejected", { agent: target?.name ?? agent }))
+    if (target) local.agent.set(target.id)
+    void server.api.session
+      .switchAgent({ sessionID, agent })
+      .catch((error) =>
+        showToast({
+          title: language.t("common.requestFailed"),
+          description: errorMessage(error, language.t("common.requestFailed")),
+        }),
+      )
+  }
+
   const dock = {
     state,
     parentID: input.session.data.parentID,
@@ -300,6 +332,10 @@ export function createActiveSessionRegion(input: {
       promptRef = element
     },
     setDockRef: input.timeline.view.setDockRef,
+    permissionAgent,
+    permissionAgents,
+    routePermission,
+    reviewPermission,
   }
 
   const active = createMemo(

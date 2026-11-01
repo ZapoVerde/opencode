@@ -30,7 +30,7 @@ type PathAction = FileAccess.ExternalDirectoryAuthorization["action"] | typeof R
 const pathActions = ["external_directory", "read", "edit"] as const satisfies readonly PathAction[]
 const agentKeys = new Set(["variant", ...Object.keys(ConfigAgent.Info.fields)])
 // Fields only V2 understands. A file that uses any of them is read as V2, whatever else it contains.
-const nativeKeys = ["permissions", "request", "system", "disabled"]
+const nativeKeys = ["permissions", "request", "system", "remit", "disabled"]
 
 export const Plugin = define({
   id: "opencode.config.agent",
@@ -113,6 +113,7 @@ export const Plugin = define({
             }
             if (item.system !== undefined) agent.system = item.system
             if (item.description !== undefined) agent.description = item.description
+            if (item.remit !== undefined) agent.remit = item.remit
             if (item.mode !== undefined) agent.mode = item.mode
             if (item.hidden !== undefined) agent.hidden = item.hidden
             if (item.color !== undefined) agent.color = item.color

@@ -892,6 +892,8 @@ function mockHandlers(
                 name: "Build",
                 mode: "primary",
                 hidden: false,
+                remit:
+                  "Works inside this project. Can read and edit files here, run local tools and tests, and install packages. Cannot push, deploy, read secrets, or leave the project folder.",
                 request: { settings: {}, headers: {}, body: {} },
                 permissions: [],
               },
@@ -1589,7 +1591,9 @@ function currentPermissions(values: readonly unknown[]) {
         action: permission.permission,
         resources: permission.patterns ?? [],
         save: permission.always,
+        scope: permission.scope,
         metadata: permission.metadata,
+        message: permission.message,
         source:
           tool?.messageID && (tool.id || tool.callID)
             ? { type: "tool", messageID: tool.messageID, id: tool.id ?? tool.callID }

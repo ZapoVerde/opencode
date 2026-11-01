@@ -34,10 +34,26 @@ export const Plugin = define({
       editor.update(plan, (item) => {
         item.name = Agent.Name.make("Plan")
         item.description = "Read-only agent for exploring the codebase and planning work before implementation."
+        item.remit =
+          "Explores and plans. Can read the project and use the internet for research. Cannot edit files, run commands, start helpers, or read secrets."
         item.mode = "primary"
-        item.permissions.push({ action: "question", resource: "*", effect: "allow" })
-        item.permissions.push({ action: "edit", resource: "*", effect: "deny" })
-        item.permissions.push({ action: "edit", resource: path.join(directory, "*"), effect: "allow" })
+        item.permissions.push(
+          { action: "question", resource: "*", effect: "allow" },
+          { action: "shell", resource: "*", effect: "deny" },
+          { action: "execute", resource: "*", effect: "deny" },
+          { action: "subagent", resource: "*", effect: "deny" },
+          { action: "webfetch", resource: "*", effect: "allow" },
+          { action: "websearch", resource: "*", effect: "allow" },
+          { action: "edit", resource: "*", effect: "deny" },
+          { action: "edit", resource: path.join(directory, "*"), effect: "allow" },
+          { action: "read", resource: "*.env", effect: "deny" },
+          { action: "read", resource: "*.env.*", effect: "deny" },
+          { action: "read", resource: "*.credentials.yaml", effect: "deny" },
+          { action: "read", resource: "*.pem", effect: "deny" },
+          { action: "read", resource: "*.key", effect: "deny" },
+          { action: "read", resource: "*.age", effect: "deny" },
+          { action: "read", resource: "*.panel-password", effect: "deny" },
+        )
       })
     })
 

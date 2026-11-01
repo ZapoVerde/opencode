@@ -264,6 +264,8 @@ export type ProjectTime = { created: number; updated: number; active: number; ar
 
 export type PermissionID = string
 
+export type PermissionScope = { id: string; label: string; resources: Array<string> }
+
 export type PermissionSource = { type: "tool"; messageID: string; id: string }
 
 export type PermissionSavedID = string
@@ -272,7 +274,7 @@ export type CommandInfo = { name: string; description?: string }
 
 export type RpcOutput = { output?: any }
 
-export type PermissionReply = "once" | "always" | "reject"
+export type PermissionReply = "once" | "session" | "always" | "reject"
 
 export type PtyID = string
 
@@ -724,6 +726,7 @@ export type PermissionRequest = {
   action: string
   resources: Array<string>
   save?: Array<string>
+  scope?: PermissionScope
   metadata?: { [x: string]: JsonValue }
   source?: PermissionSource
   message?: string
@@ -1651,6 +1654,7 @@ export type PermissionAsked = {
     action: string
     resources: Array<string>
     save?: Array<string>
+    scope?: PermissionScope
     metadata?: { [x: string]: any }
     source?: PermissionSource
     message?: string
@@ -2198,6 +2202,7 @@ export type ConfigEntry =
             request?: { headers?: { [x: string]: string }; body?: { [x: string]: JsonValue } }
             system?: string
             description?: string
+            remit?: string
             mode?: "subagent" | "primary" | "all"
             hidden?: boolean
             color?: string
@@ -2426,6 +2431,7 @@ export type AgentInfo = {
   request: ProviderRequest
   system?: string
   description?: string
+  remit?: string
   mode: "subagent" | "primary" | "all"
   hidden: boolean
   color?: AgentColor
@@ -3927,7 +3933,7 @@ export type PermissionGetOutput = { data: PermissionRequest }["data"]
 export type PermissionReplyInput = {
   readonly sessionID: string
   readonly requestID: string
-  readonly decision: "once" | "always" | "reject"
+  readonly decision: "once" | "session" | "always" | "reject"
   readonly message?: string | undefined
 }
 

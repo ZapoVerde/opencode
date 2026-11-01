@@ -1,5 +1,8 @@
+import type { PermissionRequest } from "@opencode/client/promise"
 import type { Accessor } from "solid-js"
 import type { SessionRequestModel } from "../requests/model"
+
+export type PermissionAgent = { id: string; name: string; remit?: string }
 
 export function createSessionComposerRegionController(input: {
   state: SessionRequestModel
@@ -9,6 +12,10 @@ export function createSessionComposerRegionController(input: {
   openParent: () => void
   setPromptRef: (el: HTMLDivElement) => void
   setDockRef: (el: HTMLDivElement) => void
+  permissionAgent?: Accessor<PermissionAgent | undefined>
+  permissionAgents?: Accessor<readonly PermissionAgent[]>
+  routePermission?: (agent: string) => void
+  reviewPermission?: (request: PermissionRequest) => Promise<string>
 }) {
   return {
     state: input.state,
@@ -18,6 +25,10 @@ export function createSessionComposerRegionController(input: {
     setPromptRef: input.setPromptRef,
     setDockRef: input.setDockRef,
     parentID: input.parentID,
+    permissionAgent: input.permissionAgent,
+    permissionAgents: input.permissionAgents,
+    routePermission: input.routePermission,
+    reviewPermission: input.reviewPermission,
     child: () => !!input.parentID(),
     showComposer: () => !input.state.blocked() || !!input.parentID(),
   }

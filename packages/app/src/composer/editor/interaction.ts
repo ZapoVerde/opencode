@@ -31,6 +31,7 @@ export type ComposerSelectControl = {
   current: Accessor<string>
   onSelect: (id: string) => void
   keybind?: Accessor<string[]>
+  description?: Accessor<string | undefined>
 }
 
 export type ComposerEditorView = {
