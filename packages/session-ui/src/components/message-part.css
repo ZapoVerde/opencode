@@ -1402,6 +1402,13 @@
     gap: 4px;
     flex: 1;
     min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   [data-slot="permission-hint"] {
@@ -1411,6 +1418,78 @@
     line-height: var(--line-height-large);
     color: var(--v2-text-text-muted);
     padding: 0;
+  }
+
+  [data-slot="permission-summary"] {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  [data-slot="permission-consequence"] {
+    font-family: var(--font-family-sans);
+    font-size: 13px;
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-compact);
+    color: var(--v2-text-text-faint);
+  }
+
+  [data-slot="permission-review"] {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 2px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background-color: var(--v2-background-bg-layer-02);
+  }
+
+  [data-slot="permission-review-title"] {
+    font-family: var(--font-family-sans);
+    font-size: 12px;
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-compact);
+    color: var(--v2-text-text-faint);
+  }
+
+  [data-slot="permission-review-text"] {
+    font-family: var(--font-family-sans);
+    font-size: 13px;
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-base);
+    color: var(--v2-text-text-base);
+    white-space: pre-line;
+  }
+
+  [data-slot="permission-remit"] {
+    font-family: var(--font-family-sans);
+    font-size: 13px;
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-base);
+    color: var(--v2-text-text-muted);
+  }
+
+  [data-slot="permission-route"] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 12px;
+    padding-top: 2px;
+    font-family: var(--font-family-sans);
+    font-size: 13px;
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-base);
+    color: var(--v2-text-text-muted);
+  }
+
+  [data-slot="permission-details-label"] {
+    font-family: var(--font-family-sans);
+    font-size: 12px;
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-compact);
+    color: var(--v2-text-text-faint);
   }
 
   [data-slot="permission-row"][data-variant="patterns"] {

@@ -498,6 +498,7 @@ export function createComposerModel(adapter: ComposerAdapter, options?: { queue?
           ? {
               options: () => adapter.controls().agents.options.map((name) => ({ id: name, label: name })),
               current: () => adapter.controls().agents.current,
+              description: () => adapter.controls().agents.remit,
               onSelect: (value: string) => adapter.controls().agents.select(value),
               keybind: () => command.keybindParts("agent.cycle"),
             }

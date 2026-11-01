@@ -176,6 +176,16 @@ test("shows a pending permission dock", async ({ page }) => {
   const longCommand = `npm publish ${"0123456789abcdef".repeat(400)}`
   await mockServer(page, {
     onPermissionReply: (reply) => replies.push(reply),
+    pageMessages: () => ({
+      items: [
+        {
+          id: "msg_permission_context",
+          type: "user",
+          text: "Show the deploy command before running it",
+          time: { created: 1700000000000 },
+        },
+      ],
+    }),
     sessionPermissions: {
       [sessionID]: [
         {
@@ -185,6 +195,13 @@ test("shows a pending permission dock", async ({ page }) => {
           patterns: ["git status", "git diff", longCommand],
           metadata: {},
           always: [],
+          scope: {
+            id: "push-origin",
+            label: "pushes to origin",
+            resources: ["git push origin *"],
+          },
+          message:
+            "Why: The agent is promoting the finished branch.\nWhat: Pushes the current commits to the configured remote. This is visible to others and hard to undo.\nScope: Pushes to origin for this agent.",
         },
       ],
     },
@@ -197,10 +214,16 @@ test("shows a pending permission dock", async ({ page }) => {
   const patterns = permission.locator('[data-slot="permission-patterns"]')
   const allowOnce = permission.getByRole("button", { name: "Allow once" })
   await expect(permission).toBeVisible()
+  await expect(permission.getByText("Push work to a remote")).toBeVisible()
+  await expect(permission.getByText("Reviewer")).toBeVisible()
+  await expect(permission.getByText(/Scope: Pushes to origin/)).toBeVisible()
+  await expect(permission.getByText(/Normal work:/)).toBeVisible()
+  await expect(permission.getByRole("button", { name: "Allow pushes to origin for this agent" })).toBeVisible()
+  await expect(permission.getByText("Details")).toBeVisible()
   await expect(permission.getByText("git status")).toBeVisible()
   await expect(permission.getByText("git diff")).toBeVisible()
   await expect(patterns.locator("code")).toHaveCount(3)
-  await expect(permission.locator('[data-slot="permission-actions"] button')).toHaveCount(3)
+  await expect(permission.locator('[data-slot="permission-actions"] button')).toHaveCount(2)
   await expect(page.locator('[data-component="composer"]')).toHaveCount(0)
 
   // A long command must not push the decisions past the visible area, so they stay above the scrollable list.
@@ -222,6 +245,7 @@ test("shows a pending permission dock", async ({ page }) => {
   // The reported case: a phone-sized viewport where the command wraps for far more lines than fit.
   await page.setViewportSize({ width: 390, height: 664 })
   await expect(allowOnce).toBeInViewport({ ratio: 1 })
+  await expect(page.getByText("Show the deploy command before running it")).toBeInViewport()
   await expect.poll(() => patterns.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true)
 
   const reply = page.waitForResponse((response) => response.request().method() === "POST")
@@ -402,6 +426,9 @@ test("restores the draft caret before typing after a request dock closes", async
   await expect(editor).toHaveText(`${draft.slice(0, cursor)}x${draft.slice(cursor)}`)
 })
 
-function mockServer(page: Page, requests: Pick<WorkspaceInput, "sessionPermissions" | "onPermissionReply" | "forms">) {
+function mockServer(
+  page: Page,
+  requests: Pick<WorkspaceInput, "sessionPermissions" | "onPermissionReply" | "forms" | "pageMessages">,
+) {
   return mockWorkspace(page, { name: "RequestDocks", directory, sessions: [{ id: sessionID, title }], ...requests })
 }

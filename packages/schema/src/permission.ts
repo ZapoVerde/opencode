@@ -23,11 +23,19 @@ export const Source = Schema.Union([
 ]).annotate({ identifier: "Permission.Source" })
 export type Source = typeof Source.Type
 
+export interface Scope extends Schema.Schema.Type<typeof Scope> {}
+export const Scope = Schema.Struct({
+  id: Schema.String,
+  label: Schema.String,
+  resources: Schema.Array(Schema.String),
+}).annotate({ identifier: "Permission.Scope" })
+
 const RequestFields = {
   sessionID: SessionID,
   action: Schema.String,
   resources: Schema.Array(Schema.String),
   save: Schema.Array(Schema.String).pipe(optional),
+  scope: Scope.pipe(optional),
   metadata: Schema.Record(Schema.String, Schema.Unknown).pipe(optional),
   source: Source.pipe(optional),
   message: Schema.String.pipe(optional),
@@ -39,7 +47,9 @@ export const Request = Schema.Struct({
 }).annotate({ identifier: "Permission.Request" })
 export interface Request extends Schema.Schema.Type<typeof Request> {}
 
-export const Reply = Schema.Literals(["once", "always", "reject"]).annotate({ identifier: "Permission.Reply" })
+export const Reply = Schema.Literals(["once", "session", "always", "reject"]).annotate({
+  identifier: "Permission.Reply",
+})
 export type Reply = typeof Reply.Type
 
 const Asked = ephemeral({ type: "permission.asked", schema: Request.fields })

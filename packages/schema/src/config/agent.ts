@@ -13,6 +13,7 @@ export class Info extends Schema.Class<Info>("Config.Agent")({
   request: ConfigProvider.Request.pipe(optional),
   system: Schema.String.pipe(optional),
   description: Schema.String.pipe(optional),
+  remit: Schema.String.pipe(optional),
   mode: Schema.Literals(["subagent", "primary", "all"]).pipe(optional),
   hidden: Schema.Boolean.pipe(optional),
   // An unsupported color, such as a V1 theme name, should not drop the whole agent.

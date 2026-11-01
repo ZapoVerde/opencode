@@ -346,26 +346,25 @@ export const SessionQuestionDock: Component<{ request: FormInfo; onSubmit: () =>
   const measure = () => {
     if (!root) return
 
+    const dock = root.closest('[data-component="session-composer-dock"]')
+    const pane = root.closest('[data-slot="session-chat-panel"]')
+
+    if (!(dock instanceof HTMLElement) || !(pane instanceof HTMLElement)) return
+
     const scroller = document.querySelector('[data-slot="session-timeline-scroll"] > .scroll-view__viewport')
     const head = scroller instanceof HTMLElement ? scroller.firstElementChild : undefined
-
     const top =
-      head instanceof HTMLElement && head.classList.contains("sticky") ? head.getBoundingClientRect().bottom : 0
-
-    if (!top) {
-      root.style.removeProperty("--question-prompt-max-height")
-
-      return
-    }
-
-    const dock = root.closest('[data-component="session-composer-dock"]')
-
-    if (!(dock instanceof HTMLElement)) return
+      head instanceof HTMLElement && head.classList.contains("sticky")
+        ? head.getBoundingClientRect().bottom
+        : pane.getBoundingClientRect().top
 
     const dockBottom = dock.getBoundingClientRect().bottom
     const below = Math.max(0, dockBottom - root.getBoundingClientRect().bottom)
     const gap = 8
-    const max = Math.max(240, Math.floor(dockBottom - top - gap - below))
+    const available = Math.max(0, dockBottom - top - gap - below)
+    // Keep part of the conversation visible above the decision on a phone; the question body scrolls instead.
+    const cap = window.innerWidth <= 767 ? pane.getBoundingClientRect().height * 0.62 : available
+    const max = Math.max(180, Math.floor(Math.min(available, cap)))
     root.style.setProperty("--question-prompt-max-height", `${max}px`)
   }
 

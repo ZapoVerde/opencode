@@ -170,7 +170,7 @@ export function createSessionRequestModel() {
     return store.responding === perm.id
   })
 
-  const decide = (response: "once" | "always" | "reject") => {
+  const decide = (response: "once" | "session" | "always" | "reject", message?: string) => {
     const perm = permissionRequest()
 
     if (!perm) return
@@ -179,7 +179,7 @@ export function createSessionRequestModel() {
 
     setStore("responding", perm.id)
     serverSDK.api.permission
-      .reply({ sessionID: perm.sessionID, requestID: perm.id, decision: response })
+      .reply({ sessionID: perm.sessionID, requestID: perm.id, decision: response, ...(message ? { message } : {}) })
       .catch((error) => {
         showToast({
           title: language.t("common.requestFailed"),
