@@ -88,6 +88,12 @@ function match(action: string, resource: string, ...rulesets: Permission.Ruleset
     .findLast((rule) => Wildcard.match(action, rule.action) && Wildcard.match(resource, rule.resource))
 }
 
+// A configured `*` / `*` ask matches every resource and decides nothing, so it is the fallback in
+// everything but name. Reporting it as the winning rule would hide that no specific rule applied.
+function blanketAsk(rule: Permission.Rule) {
+  return rule.effect === "ask" && rule.action === "*" && rule.resource === "*"
+}
+
 export function merge(...rulesets: Permission.Ruleset[]): Permission.Ruleset {
   return rulesets.flat()
 }
@@ -185,7 +191,7 @@ const layer = Layer.effect(
       const rules = configuration.rules
       if (denied(input, rules)) return { effect: "deny" as const, rules }
       const all = [...rules, ...(grants.get(input.sessionID) ?? []), ...(yield* savedRules())]
-      const matched = input.resources.map((resource) => ({ rule: match(input.action, resource, all) }))
+      const matched = input.resources.map((resource) => ({ resource, rule: match(input.action, resource, all) }))
       const asking = matched.find((item) => (item.rule?.effect ?? "ask") === "ask")
       const effect: Permission.Effect = asking ? "ask" : "allow"
       const event = yield* hooks.trigger("permission", "evaluate", {
@@ -197,15 +203,17 @@ const layer = Layer.effect(
         source: input.source,
         effect,
       })
-      // A request that only the default ruleset asks about has no configured rule to point at, and a
-      // request a plugin turned into an ask was allowed by the rules.
-      const cause: PermissionLog.Cause = effect === "ask" ? (asking?.rule ? "rule" : "default") : "plugin"
+      // A `*` / `*` ask is the configured fallback: it matches everything and decides nothing, so it
+      // reads as the default. A request a plugin turned into an ask was allowed by the rules.
+      const cause: PermissionLog.Cause =
+        effect === "ask" ? (asking?.rule && !blanketAsk(asking.rule) ? "rule" : "default") : "plugin"
       return {
         effect: event.effect,
         message: event.message,
         rules: all,
         cause,
-        rule: asking?.rule,
+        rule: cause === "rule" ? asking?.rule : undefined,
+        asker: asking?.resource ?? input.resources[0],
         agent: configuration.agent,
       }
     })
@@ -231,8 +239,7 @@ const layer = Layer.effect(
     const create = (
       request: Request,
       agent: Agent.ID | undefined,
-      cause: PermissionLog.Cause,
-      rule?: PermissionLog.Rule,
+      notice: { readonly cause: PermissionLog.Cause; readonly rule?: PermissionLog.Rule; readonly asker?: string },
     ) =>
       Effect.uninterruptible(
         Effect.gen(function* () {
@@ -257,8 +264,9 @@ const layer = Layer.effect(
               action: request.action,
               resources: request.resources,
               scope: request.scope,
-              cause,
-              rule,
+              cause: notice.cause,
+              rule: notice.rule,
+              asker: notice.asker,
             }),
           ).pipe(Effect.orElseSucceed(() => undefined))
           return item
@@ -269,7 +277,7 @@ const layer = Layer.effect(
       if (closed) return { id: input.id ?? ID.create(), effect: "deny" as const }
       const result = yield* evaluateInput(input)
       const value = request(input, result.message)
-      if (result.effect === "ask") yield* create(value, result.agent ?? input.agent, result.cause, result.rule)
+      if (result.effect === "ask") yield* create(value, result.agent ?? input.agent, result)
       return { id: value.id, effect: result.effect }
     })
 
@@ -288,12 +296,7 @@ const layer = Layer.effect(
               })
             }
             if (result.effect === "allow") return
-            const item = yield* create(
-              request(input, result.message),
-              result.agent ?? input.agent,
-              result.cause,
-              result.rule,
-            )
+            const item = yield* create(request(input, result.message), result.agent ?? input.agent, result)
             return yield* restore(Deferred.await(item.deferred)).pipe(
               // Deliberate defect tunnel: leaves wrap execution in blanket `mapError`, which
               // must not convert a user's decline into model-facing tool output. The decline
