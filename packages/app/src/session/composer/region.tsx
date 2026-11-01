@@ -297,12 +297,15 @@ export function createActiveSessionRegion(input: {
     const id = input.session.data.info()?.agent
     return permissionAgents().find((agent) => agent.id === id || agent.name === id)
   })
-  const reviewPermission = (request: PermissionRequest) =>
+  const reviewPermission = (request: PermissionRequest, signal: AbortSignal) =>
     server.api.session
-      .generate({
-        sessionID: request.sessionID,
-        prompt: permissionReviewPrompt(request, permissionAgent()),
-      })
+      .generate(
+        {
+          sessionID: request.sessionID,
+          prompt: permissionReviewPrompt(request, permissionAgent()),
+        },
+        { signal },
+      )
       .then((result) => result.text)
 
   const routePermission = (agent: string) => {
