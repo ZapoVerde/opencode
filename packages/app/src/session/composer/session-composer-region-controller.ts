@@ -15,7 +15,7 @@ export function createSessionComposerRegionController(input: {
   permissionAgent?: Accessor<PermissionAgent | undefined>
   permissionAgents?: Accessor<readonly PermissionAgent[]>
   routePermission?: (agent: string) => void
-  reviewPermission?: (request: PermissionRequest) => Promise<string>
+  reviewPermission?: (request: PermissionRequest, signal: AbortSignal) => Promise<string>
 }) {
   return {
     state: input.state,

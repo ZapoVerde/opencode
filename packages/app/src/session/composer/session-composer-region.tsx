@@ -27,7 +27,7 @@ export type SessionComposerRegionViewController = Pick<
   permissionAgent?: () => PermissionAgent | undefined
   permissionAgents?: () => readonly PermissionAgent[]
   routePermission?: (agent: string) => void
-  reviewPermission?: (request: PermissionRequest) => Promise<string>
+  reviewPermission?: (request: PermissionRequest, signal: AbortSignal) => Promise<string>
 }
 
 export function SessionComposerRegion(props: {

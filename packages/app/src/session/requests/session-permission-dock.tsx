@@ -2,6 +2,7 @@ import { For, Show, createResource, onCleanup, onMount } from "solid-js"
 import type { PermissionRequest } from "@opencode/client/promise"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
 import { makeEventListener } from "@solid-primitives/event-listener"
+import { abort } from "@opencode/util/abort"
 import { Button } from "@opencode/ui/button"
 import { DockPrompt } from "@opencode/session-ui/dock-prompt"
 import { Icon } from "@opencode/ui/icon"
@@ -10,6 +11,19 @@ import { describePermission } from "./permission-description"
 
 type PermissionAgent = { id: string; name: string; remit?: string }
 
+// Switching away and back must not start a second model review for the same pending request.
+const reviewCache = new Map<string, string>()
+const reviewCacheLimit = 50
+
+function rememberReview(id: string, text: string) {
+  reviewCache.delete(id)
+  reviewCache.set(id, text)
+  for (const oldest of reviewCache.keys()) {
+    if (reviewCache.size <= reviewCacheLimit) break
+    reviewCache.delete(oldest)
+  }
+}
+
 export function SessionPermissionDock(props: {
   request: PermissionRequest
   responding: boolean
@@ -17,16 +31,32 @@ export function SessionPermissionDock(props: {
   agents?: readonly PermissionAgent[]
   onDecide: (response: "once" | "session" | "always" | "reject", message?: string) => void
   onRoute?: (agent: string) => void
-  review?: (request: PermissionRequest) => Promise<string>
+  review?: (request: PermissionRequest, signal: AbortSignal) => Promise<string>
 }) {
   const language = useLanguage()
   const description = () => describePermission(props.request, props.agent?.id)
   const t = (key: string) => language.t(key as Parameters<typeof language.t>[0])
+  let reviewAbort: AbortController | undefined
+  // A review follows the open dock. Switching sessions or requests must abort it, or the stale model call keeps
+  // holding a browser connection and the next session waits behind it.
+  onCleanup(() => abort(reviewAbort))
   const [review] = createResource(
-    () => (props.review && !props.request.message ? props.request.id : undefined),
-    () => props.review?.(props.request) ?? Promise.resolve(""),
+    () =>
+      props.review && !props.request.message && !reviewCache.has(props.request.id) ? props.request.id : undefined,
+    () => {
+      const cached = reviewCache.get(props.request.id)
+      if (cached) return Promise.resolve(cached)
+      abort(reviewAbort)
+      const controller = new AbortController()
+      reviewAbort = controller
+      return (props.review?.(props.request, controller.signal) ?? Promise.resolve("")).then((text) => {
+        if (text.trim() && !controller.signal.aborted) rememberReview(props.request.id, text)
+        return text
+      })
+    },
   )
-  const reviewText = () => (review() ?? props.request.message ?? "").trim().slice(0, 1200)
+  const reviewText = () =>
+    (reviewCache.get(props.request.id) ?? review() ?? props.request.message ?? "").trim().slice(0, 1200)
 
   let root: HTMLDivElement | undefined
   let measuring: number | undefined
