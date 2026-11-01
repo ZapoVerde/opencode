@@ -137,6 +137,28 @@ describe("Permission", () => {
     }),
   )
 
+  it.effect("treats a blanket ask rule as the default and names the statement that asked", () =>
+    Effect.gen(function* () {
+      yield* setup([
+        { action: "*", resource: "*", effect: "ask" },
+        { action: "shell", resource: "echo *", effect: "allow" },
+      ])
+      const service = yield* Permission.Service
+      yield* service.ask(
+        assertion({
+          id: Permission.ID.create("per_batch"),
+          action: "shell",
+          resources: ["echo hello", "cd /project"],
+        }),
+      )
+
+      const entries = yield* Effect.promise(() => PermissionLog.read())
+      const entry = entries.find((item) => item.id === "per_batch")
+      expect(entry).toMatchObject({ cause: "default", asker: "cd /project", shape: "cd" })
+      expect(entry?.rule).toBeUndefined()
+    }),
+  )
+
   it.effect("evaluates against an explicit agent", () =>
     Effect.gen(function* () {
       yield* setup([{ action: "read", resource: "*", effect: "allow" }])
