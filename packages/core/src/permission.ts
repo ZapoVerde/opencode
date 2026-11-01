@@ -3,6 +3,7 @@ export * as Permission from "./permission.js"
 import { makeLocationNode } from "@opencode/util/effect/app-node"
 import { Context, Deferred, Effect, Layer, Schema } from "effect"
 import { Permission } from "@opencode/schema/permission"
+import { SessionEvent } from "@opencode/schema/session-event"
 import { Bus } from "./bus.js"
 import { Location } from "./location.js"
 import { Agent } from "./agent.js"
@@ -11,6 +12,7 @@ import { SessionSchema } from "./session/schema.js"
 import { SessionStore } from "./session/store.js"
 import { Wildcard } from "./util/wildcard.js"
 import { PermissionSaved } from "./permission/saved.js"
+import { scope } from "./permission/scope.js"
 import { PluginHooks } from "./plugin/hooks.js"
 
 const PermissionEffect = Permission.Effect
@@ -30,7 +32,9 @@ export type Request = typeof Request.Type
 export const Reply = Permission.Reply
 export type Reply = typeof Reply.Type
 
-export interface AssertInput extends Omit<Request, "id" | "message"> {
+export { scope }
+
+export interface AssertInput extends Omit<Request, "id" | "message" | "scope"> {
   readonly id?: ID
   readonly agent?: Agent.ID
 }
@@ -115,6 +119,17 @@ const layer = Layer.effect(
     const saved = yield* PermissionSaved.Service
     const hooks = yield* PluginHooks.Service
     const pending = new Map<ID, Pending>()
+    // A session approval is deliberately process-local: it lasts for the current agent's session, not
+    // the project, and a restart or an agent switch forgets it. Grants are checked after the agent and
+    // session rules, so they can widen an ask but can never override an agent deny.
+    const grants = new Map<SessionSchema.ID, Permission.Ruleset>()
+    const unsubscribe = yield* bus.listen((event) => {
+      if (event.type !== SessionEvent.AgentSelected.type) return Effect.void
+      // The event type check above owns this payload shape.
+      grants.delete((event.data as { sessionID: SessionSchema.ID }).sessionID)
+      return Effect.void
+    })
+    yield* Effect.addFinalizer(() => unsubscribe)
     let closed = false
 
     const close = Effect.gen(function* () {
@@ -160,7 +175,7 @@ const layer = Layer.effect(
     const evaluateInput = Effect.fnUntraced(function* (input: AssertInput) {
       const rules = yield* configured(input.sessionID, input.agent)
       if (denied(input, rules)) return { effect: "deny" as const, rules }
-      const all = [...rules, ...(yield* savedRules())]
+      const all = [...rules, ...(grants.get(input.sessionID) ?? []), ...(yield* savedRules())]
       const effects = input.resources.map((resource) => evaluate(input.action, resource, all).effect)
       const effect: Permission.Effect = effects.includes("ask") ? "ask" : "allow"
       const event = yield* hooks.trigger("permission", "evaluate", {
@@ -182,6 +197,7 @@ const layer = Layer.effect(
         action: input.action,
         resources: input.resources,
         save: input.save,
+        scope: scope(input),
         // Tools copy optional inputs straight into metadata; undefined values are not JSON and would
         // fail the HttpApi response encoder when clients list pending requests.
         metadata:
@@ -287,18 +303,40 @@ const layer = Layer.effect(
             return
           }
 
-          if (input.reply === "always" && existing.request.save?.length) {
+          const save = existing.request.save
+          if (input.reply === "always" && save?.length) {
             yield* saved.add({
               projectID: location.project.id,
               action: existing.request.action,
-              resources: existing.request.save,
+              resources: save,
             })
+          }
+          // A session approval grants the engine-selected scope, never a pattern supplied by the
+          // client or invented by the reviewer. A request with no safe scope is a one-time decision.
+          const sessionResources = input.reply === "session" ? (existing.request.scope?.resources ?? []) : []
+          if (sessionResources.length) {
+            grants.set(
+              existing.request.sessionID,
+              merge(
+                grants.get(existing.request.sessionID) ?? [],
+                sessionResources.map((resource) => ({
+                  action: existing.request.action,
+                  resource,
+                  effect: "allow" as const,
+                })),
+              ),
+            )
           }
           yield* Deferred.succeed(existing.deferred, undefined)
           pending.delete(input.requestID)
-          if (input.reply !== "always" || !existing.request.save?.length) return
+          if (input.reply === "once") return
+          if (input.reply === "always" && !save?.length) return
+          if (input.reply === "session" && !sessionResources.length) return
 
           for (const [id, item] of pending) {
+            // A session grant only applies to the session that approved it. Project-wide saved rules
+            // can settle pending asks everywhere.
+            if (input.reply === "session" && item.request.sessionID !== existing.request.sessionID) continue
             const result = yield* evaluateInput({ ...item.request, agent: item.agent }).pipe(
               Effect.catchTag("Session.NotFoundError", () => Effect.undefined),
             )
@@ -306,7 +344,7 @@ const layer = Layer.effect(
             yield* bus.publish(Permission.Event.Replied, {
               sessionID: item.request.sessionID,
               requestID: item.request.id,
-              reply: "always",
+              reply: input.reply,
             })
             yield* Deferred.succeed(item.deferred, undefined)
             pending.delete(id)

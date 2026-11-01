@@ -1,10 +1,11 @@
+import type { PermissionRequest } from "@opencode/client/promise"
 import { createMemo, Show, type JSX } from "solid-js"
 import { SessionElicitationDock } from "@/session/requests/session-elicitation-dock"
 import { SessionPermissionDock } from "@/session/requests/session-permission-dock"
 import { SessionQuestionDock } from "@/session/requests/session-question-dock"
 import { questionMotion } from "@/session/requests/question-motion"
 import { SessionWebSearchDock } from "@/session/requests/session-websearch-dock"
-import type { SessionComposerRegionController } from "./session-composer-region-controller"
+import type { PermissionAgent, SessionComposerRegionController } from "./session-composer-region-controller"
 import { ComposerMorph, Grow } from "./spring-height"
 
 type SessionComposerRegionState = Pick<
@@ -21,7 +22,13 @@ type SessionComposerRegionState = Pick<
 export type SessionComposerRegionViewController = Pick<
   SessionComposerRegionController,
   "centered" | "onResponseSubmit" | "setDockRef" | "child" | "showComposer"
-> & { state: SessionComposerRegionState }
+> & {
+  state: SessionComposerRegionState
+  permissionAgent?: () => PermissionAgent | undefined
+  permissionAgents?: () => readonly PermissionAgent[]
+  routePermission?: (agent: string) => void
+  reviewPermission?: (request: PermissionRequest) => Promise<string>
+}
 
 export function SessionComposerRegion(props: {
   controller: SessionComposerRegionViewController
@@ -81,9 +88,13 @@ export function SessionComposerRegion(props: {
                     <SessionPermissionDock
                       request={request}
                       responding={controller.state.permissionResponding()}
-                      onDecide={(response) => {
+                      agent={controller.permissionAgent?.()}
+                      agents={controller.permissionAgents?.()}
+                      onRoute={(agent) => controller.routePermission?.(agent)}
+                      review={controller.reviewPermission}
+                      onDecide={(response, message) => {
                         controller.onResponseSubmit()
-                        controller.state.decide(response)
+                        controller.state.decide(response, message)
                       }}
                     />
                   )}

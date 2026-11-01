@@ -16,6 +16,7 @@ export function normalizeAgentList(input: AgentListOutput["data"] | Agent[]): Ag
   return (input as AgentListOutput["data"]).map((agent) => ({
     name: agent.id,
     description: agent.description,
+    remit: agent.remit,
     mode: agent.mode,
     hidden: agent.hidden,
     temperature:

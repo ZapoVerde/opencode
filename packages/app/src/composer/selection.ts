@@ -77,6 +77,7 @@ export function createComposerControls(input: { model?: ModelSelection } = {}) {
         available: normalizeAgentList(data.location.agent.list({ directory: sdk().directory }) ?? []),
         options: local.agent.list().map((agent) => agent.name),
         current: local.agent.current()?.name ?? "",
+        remit: local.agent.current()?.remit,
         visible: local.agent.visible(),
         select: local.agent.set,
       },
