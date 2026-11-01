@@ -159,6 +159,24 @@ const Root = Spec.make(typeof OPENCODE_CLI_NAME === "string" ? OPENCODE_CLI_NAME
             ),
           },
         }),
+        Spec.make("permissions", {
+          description: "Summarize the recent permission requests, grouped by agent and command shape",
+          params: {
+            agent: Flag.String("agent").pipe(
+              Flag.withDescription("Only count requests from one agent"),
+              Flag.optional,
+            ),
+            limit: Flag.Int("limit").pipe(
+              Flag.withSchema(Schema.Int.check(Schema.isGreaterThanOrEqualTo(1))),
+              Flag.withDescription("Maximum rows to print"),
+              Flag.withDefault(25),
+            ),
+            json: Flag.Boolean("json").pipe(
+              Flag.withDescription("Print every retained request instead of the summary"),
+              Flag.withDefault(false),
+            ),
+          },
+        }),
       ],
     }),
     Spec.make("auth", {

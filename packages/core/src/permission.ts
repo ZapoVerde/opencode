@@ -4,6 +4,7 @@ import { makeLocationNode } from "@opencode/util/effect/app-node"
 import { Context, Deferred, Effect, Layer, Schema } from "effect"
 import { Permission } from "@opencode/schema/permission"
 import { SessionEvent } from "@opencode/schema/session-event"
+import { PermissionLog } from "@opencode/util/permission-log"
 import { Bus } from "./bus.js"
 import { Location } from "./location.js"
 import { Agent } from "./agent.js"
@@ -76,15 +77,15 @@ export class NotFoundError extends Schema.TaggedError<NotFoundError>()("Permissi
 export type Error = BlockedError | CorrectedError
 
 export function evaluate(action: string, resource: string, ...rulesets: Permission.Ruleset[]): Permission.Rule {
-  return (
-    rulesets
-      .flat()
-      .findLast((rule) => Wildcard.match(action, rule.action) && Wildcard.match(resource, rule.resource)) ?? {
-      action,
-      resource: "*",
-      effect: "ask",
-    }
-  )
+  return match(action, resource, ...rulesets) ?? { action, resource: "*", effect: "ask" }
+}
+
+// The default ruleset asks when nothing matches. Callers that report why an ask happened need to
+// tell that apart from a configured `ask` rule, so they use this and keep `undefined` as "no rule".
+function match(action: string, resource: string, ...rulesets: Permission.Ruleset[]) {
+  return rulesets
+    .flat()
+    .findLast((rule) => Wildcard.match(action, rule.action) && Wildcard.match(resource, rule.resource))
 }
 
 export function merge(...rulesets: Permission.Ruleset[]): Permission.Ruleset {
@@ -157,11 +158,18 @@ const layer = Layer.effect(
       )
     })
 
+    // The answer is already published, so a log failure is dropped rather than failing the reply.
+    const logReply = (id: ID, reply: Permission.Reply) =>
+      Effect.tryPromise(() => PermissionLog.reply({ id, reply })).pipe(Effect.orElseSucceed(() => undefined))
+
     const configured = Effect.fnUntraced(function* (sessionID: SessionSchema.ID, agentID?: Agent.ID) {
       const session = yield* sessions.get(sessionID)
       if (!session) return yield* new SessionErrors.NotFoundError({ sessionID })
       const agent = yield* agents.resolve(agentID ?? session.agent)
-      return merge(agent?.permissions ?? missingAgentPermissions, session.permissions ?? [])
+      return {
+        agent: agent?.id,
+        rules: merge(agent?.permissions ?? missingAgentPermissions, session.permissions ?? []),
+      }
     })
 
     function denied(input: Pick<Request, "action" | "resources">, rules: Permission.Ruleset) {
@@ -173,11 +181,13 @@ const layer = Layer.effect(
     }
 
     const evaluateInput = Effect.fnUntraced(function* (input: AssertInput) {
-      const rules = yield* configured(input.sessionID, input.agent)
+      const configuration = yield* configured(input.sessionID, input.agent)
+      const rules = configuration.rules
       if (denied(input, rules)) return { effect: "deny" as const, rules }
       const all = [...rules, ...(grants.get(input.sessionID) ?? []), ...(yield* savedRules())]
-      const effects = input.resources.map((resource) => evaluate(input.action, resource, all).effect)
-      const effect: Permission.Effect = effects.includes("ask") ? "ask" : "allow"
+      const matched = input.resources.map((resource) => ({ rule: match(input.action, resource, all) }))
+      const asking = matched.find((item) => (item.rule?.effect ?? "ask") === "ask")
+      const effect: Permission.Effect = asking ? "ask" : "allow"
       const event = yield* hooks.trigger("permission", "evaluate", {
         sessionID: input.sessionID,
         agent: input.agent,
@@ -187,7 +197,17 @@ const layer = Layer.effect(
         source: input.source,
         effect,
       })
-      return { effect: event.effect, message: event.message, rules: all }
+      // A request that only the default ruleset asks about has no configured rule to point at, and a
+      // request a plugin turned into an ask was allowed by the rules.
+      const cause: PermissionLog.Cause = effect === "ask" ? (asking?.rule ? "rule" : "default") : "plugin"
+      return {
+        effect: event.effect,
+        message: event.message,
+        rules: all,
+        cause,
+        rule: asking?.rule,
+        agent: configuration.agent,
+      }
     })
 
     function request(input: AssertInput, message?: string): Request {
@@ -208,7 +228,12 @@ const layer = Layer.effect(
       }
     }
 
-    const create = (request: Request, agent?: Agent.ID) =>
+    const create = (
+      request: Request,
+      agent: Agent.ID | undefined,
+      cause: PermissionLog.Cause,
+      rule?: PermissionLog.Rule,
+    ) =>
       Effect.uninterruptible(
         Effect.gen(function* () {
           const deferred = yield* Deferred.make<void, DeclinedError | CorrectedError>()
@@ -223,6 +248,19 @@ const layer = Layer.effect(
           yield* bus
             .publish(Permission.Event.Asked, request)
             .pipe(Effect.onError(() => Effect.sync(() => pending.delete(request.id))))
+          // The request is already visible, so a log failure is dropped rather than failing the ask.
+          yield* Effect.tryPromise(() =>
+            PermissionLog.record({
+              id: request.id,
+              session: request.sessionID,
+              agent: agent ?? "unknown",
+              action: request.action,
+              resources: request.resources,
+              scope: request.scope,
+              cause,
+              rule,
+            }),
+          ).pipe(Effect.orElseSucceed(() => undefined))
           return item
         }),
       )
@@ -231,7 +269,7 @@ const layer = Layer.effect(
       if (closed) return { id: input.id ?? ID.create(), effect: "deny" as const }
       const result = yield* evaluateInput(input)
       const value = request(input, result.message)
-      if (result.effect === "ask") yield* create(value, input.agent)
+      if (result.effect === "ask") yield* create(value, result.agent ?? input.agent, result.cause, result.rule)
       return { id: value.id, effect: result.effect }
     })
 
@@ -250,7 +288,12 @@ const layer = Layer.effect(
               })
             }
             if (result.effect === "allow") return
-            const item = yield* create(request(input, result.message), input.agent)
+            const item = yield* create(
+              request(input, result.message),
+              result.agent ?? input.agent,
+              result.cause,
+              result.rule,
+            )
             return yield* restore(Deferred.await(item.deferred)).pipe(
               // Deliberate defect tunnel: leaves wrap execution in blanket `mapError`, which
               // must not convert a user's decline into model-facing tool output. The decline
@@ -286,6 +329,7 @@ const layer = Layer.effect(
               input.message ? new CorrectedError({ feedback: input.message }) : new DeclinedError(),
             )
             pending.delete(input.requestID)
+            yield* logReply(existing.request.id, input.reply)
             for (const [id, item] of pending) {
               if (item.request.sessionID !== existing.request.sessionID) continue
               yield* bus.publish(Permission.Event.Replied, {
@@ -299,6 +343,7 @@ const layer = Layer.effect(
                 input.message ? new CorrectedError({ feedback: input.message }) : new DeclinedError(),
               )
               pending.delete(id)
+              yield* logReply(item.request.id, "reject")
             }
             return
           }
@@ -329,6 +374,7 @@ const layer = Layer.effect(
           }
           yield* Deferred.succeed(existing.deferred, undefined)
           pending.delete(input.requestID)
+          yield* logReply(existing.request.id, input.reply)
           if (input.reply === "once") return
           if (input.reply === "always" && !save?.length) return
           if (input.reply === "session" && !sessionResources.length) return
@@ -348,6 +394,7 @@ const layer = Layer.effect(
             })
             yield* Deferred.succeed(item.deferred, undefined)
             pending.delete(id)
+            yield* logReply(item.request.id, input.reply)
           }
         }),
       ),

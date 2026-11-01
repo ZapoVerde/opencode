@@ -1,10 +1,11 @@
 import type { PermissionRequest } from "@opencode/client/promise"
+import { redactSecrets } from "@opencode/util/redact"
 
 type ReviewAgent = { id?: string; name?: string; remit?: string }
 
 export function permissionReviewPrompt(request: PermissionRequest, agent?: ReviewAgent) {
   const resources = request.resources
-    .map((resource) => `- ${redact(resource).slice(0, 1500)}`)
+    .map((resource) => `- ${redactSecrets(resource).slice(0, 1500)}`)
     .join("\n")
   const scope = request.scope?.label ?? "Allow once only"
 
@@ -24,15 +25,4 @@ ACTION: ${request.action}
 SCOPE CHOSEN BY THE ENGINE: ${scope}
 RESOURCES:
 ${resources || "(none)"}`
-}
-
-function redact(value: string) {
-  return value
-    .replace(/\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi, "$1 [redacted]")
-    .replace(
-      /((?:api[_-]?key|token|secret|password|authorization)\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s"']+)/gi,
-      "$1[redacted]",
-    )
-    .replace(/(https?:\/\/)[^/\s:@]+:[^/\s@]+@/gi, "$1[redacted]@")
-    .replace(/(--(?:password|token|api-key|secret)\s+)\S+/gi, "$1[redacted]")
 }
