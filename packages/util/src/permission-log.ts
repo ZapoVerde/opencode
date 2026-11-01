@@ -31,7 +31,9 @@ export type Request = {
   readonly cause: Cause
   /** The rule that asked, or the rule the plugin replaced. Absent when no rule matched. */
   readonly rule?: Rule
-  /** The countable group a resource belongs to, such as `git push` or `read .ts`. */
+  /** The resource that forced the ask. A batched command asks for all of its statements, but one of them decided. */
+  readonly asker?: string
+  /** The countable group the asker belongs to, such as `git push` or `read .ts`. */
   readonly shape: string
   /** How many times the same shape already asked in this session, before this request. */
   readonly repeat: number
@@ -77,11 +79,13 @@ export async function record(input: Omit<Request, "at" | "shape" | "repeat">, op
   const state = current(directory)
   await state.loaded
   const resources = input.resources.map((resource) => redactSecrets(resource).slice(0, resourceLimit))
-  const shape = shapeOf(input.action, resources[0] ?? "")
+  const asker = redactSecrets(input.asker ?? resources[0] ?? "").slice(0, resourceLimit)
+  const shape = shapeOf(input.action, asker)
   const key = repeatKey(input.session, input.action, shape)
   const request: Request = {
     ...input,
     resources,
+    asker,
     at: options.at ?? Date.now(),
     shape,
     repeat: state.repeats.get(key) ?? 0,

@@ -66,6 +66,25 @@ describe("permission log", () => {
     expect(entry?.resources[1]).toHaveLength(200)
   })
 
+  test("groups a batched ask by the statement that forced it", async () => {
+    const dir = await directory()
+    await PermissionLog.record(
+      {
+        id: "per_batch",
+        session: "ses_a",
+        agent: "boss",
+        action: "shell",
+        resources: ["echo hello", "cd /project"],
+        asker: "cd /project",
+        cause: "default",
+      },
+      { directory: dir, at: 1 },
+    )
+
+    const [entry] = await PermissionLog.read({ directory: dir })
+    expect(entry).toMatchObject({ asker: "cd /project", shape: "cd" })
+  })
+
   test("counts repeats of the same shape inside one session", async () => {
     const dir = await directory()
     const record = (id: string, session: string, command: string, cause: PermissionLog.Cause = "default") =>
