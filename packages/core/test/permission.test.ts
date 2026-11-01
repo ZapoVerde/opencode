@@ -17,6 +17,7 @@ import { Session } from "@opencode/core/session"
 import { SessionTable } from "@opencode/core/session/sql"
 import { SessionStore } from "@opencode/core/session/store"
 import { ShellParse } from "@opencode/core/shell/parse"
+import { PermissionLog } from "@opencode/util/permission-log"
 import { eq } from "drizzle-orm"
 import { location } from "./fixture/location"
 import { testEffect } from "./lib/effect"
@@ -111,6 +112,28 @@ describe("Permission", () => {
       yield* setRules([])
       expect(yield* service.ask(assertion())).toEqual({ id: Permission.ID.create("per_test"), effect: "ask" })
       expect(yield* service.get(Permission.ID.create("per_test"))).toBeDefined()
+    }),
+  )
+
+  it.effect("records why an ask happened and how it was answered", () =>
+    Effect.gen(function* () {
+      yield* setup([])
+      const service = yield* Permission.Service
+      yield* service.ask(assertion({ id: Permission.ID.create("per_default") }))
+      yield* setRules([{ action: "read", resource: "*", effect: "ask" }])
+      yield* service.ask(assertion({ id: Permission.ID.create("per_rule") }))
+      yield* service.reply({ requestID: Permission.ID.create("per_rule"), reply: "once" })
+
+      const entries = yield* Effect.promise(() => PermissionLog.read())
+      const fallback = entries.find((entry) => entry.id === "per_default")
+      expect(fallback).toMatchObject({ agent: "test", action: "read", cause: "default", shape: "read .ts" })
+      expect(fallback?.rule).toBeUndefined()
+      const configured = entries.find((entry) => entry.id === "per_rule")
+      expect(configured).toMatchObject({
+        cause: "rule",
+        rule: { action: "read", resource: "*", effect: "ask" },
+        reply: { reply: "once" },
+      })
     }),
   )
 
