@@ -55,8 +55,16 @@ export function SessionPermissionDock(props: {
       })
     },
   )
-  const reviewText = () =>
-    (reviewCache.get(props.request.id) ?? review() ?? props.request.message ?? "").trim().slice(0, 1200)
+
+  // Reading `review()` while it loads suspends the reader, and the nearest boundary is the whole route, so an open
+  // permission blanks the session until the review model answers. Read the brief only once it has settled.
+  const reviewText = () => {
+    const loaded = review.state === "ready" || review.state === "refreshing"
+
+    return (reviewCache.get(props.request.id) ?? (loaded ? review.latest : undefined) ?? props.request.message ?? "")
+      .trim()
+      .slice(0, 1200)
+  }
 
   let root: HTMLDivElement | undefined
   let measuring: number | undefined
