@@ -1905,6 +1905,7 @@ function scanPowerShellList(
   let memberChainStart: number | undefined
   let hasMemberAccess = false
   let hasFileRedirect = false
+  let redirects: Redirect[] = []
   let stopParsing = false
   let commandEnd = start
   let statementHead = true
@@ -1938,7 +1939,7 @@ function scanPowerShellList(
       rawWords.push(input.slice(wordStart, end))
       wordEnds.push(end)
       dangling = false
-    }
+    } else if (word) redirects.push({ direction: "write", word })
     commandEnd = end
     redirectTarget = false
     word = ""
@@ -1953,6 +1954,7 @@ function scanPowerShellList(
         rawWords: [...rawWords],
         wordEnds: wordEnds.map((value) => value - segment),
         ...(statementHead && !invocation && !expression && !clause ? { statementHead: true as const } : {}),
+        ...(redirects.length ? { redirects: [...redirects] } : {}),
       })
     else if (
       (!expression && !clause && invocation) ||
@@ -1967,6 +1969,7 @@ function scanPowerShellList(
     wordEnds.length = 0
     redirectTarget = false
     hasFileRedirect = false
+    redirects = []
     invocation = false
     expression = initialExpression
     clause = initialClause
