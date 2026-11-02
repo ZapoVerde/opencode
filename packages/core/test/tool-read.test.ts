@@ -174,7 +174,7 @@ describe("ReadTool", () => {
         mime: "text/plain",
       })
       expect(execution.content).toEqual([{ type: "text", text: "Read file README.md, lines 1-1\n1: hello" }])
-      expect(assertions).toMatchObject([{ sessionID, action: "read", resources: ["README.md"], save: ["*"] }])
+      expect(assertions).toMatchObject([{ sessionID, action: "read", resources: ["README.md"], save: [] }])
       expect(readCalls).toEqual([
         {
           input: AbsolutePath.make(path.join(process.cwd(), "README.md")),
@@ -185,7 +185,7 @@ describe("ReadTool", () => {
     }),
   )
 
-  it.effect("asks for external_directory approval before reading an external absolute path", () =>
+  it.effect("reads an external absolute path without external_directory approval", () =>
     Effect.gen(function* () {
       const registry = yield* Tool.Service
       const external = path.join(path.parse(process.cwd()).root, "external-read", "notes.txt")
@@ -198,12 +198,7 @@ describe("ReadTool", () => {
         }),
       ).toMatchObject({ status: "completed" })
       expect(assertions).toMatchObject([
-        {
-          sessionID,
-          action: "external_directory",
-          resources: [path.join(path.dirname(external), "*").replaceAll("\\", "/")],
-        },
-        { sessionID, action: "read", resources: [external.replaceAll("\\", "/")], save: ["*"] },
+        { sessionID, action: "read", resources: [external.replaceAll("\\", "/")], save: [] },
       ])
       expect(readCalls).toEqual([{ input: AbsolutePath.make(external), page: { offset: undefined, limit: undefined } }])
     }),
@@ -727,7 +722,7 @@ describe("ReadTool", () => {
           message: `File not found: ${missingPath}\n\nDid you mean one of these?\n__missing_read_target__.txt.bak\ncopy___missing_read_target__.txt\nold___missing_read_target__.txt`,
         },
       })
-      expect(assertions).toMatchObject([{ sessionID, action: "read", resources: [missingPath], save: ["*"] }])
+      expect(assertions).toMatchObject([{ sessionID, action: "read", resources: [missingPath], save: [] }])
       expect(readCalls).toEqual([
         {
           input: AbsolutePath.make(missingAbsolutePath),
@@ -829,7 +824,7 @@ describe("ReadTool", () => {
     }),
   )
 
-  it.effect("recovers an external filename without repeating directory approval", () =>
+  it.effect("recovers an external filename and checks the recovered path's own read rules", () =>
     Effect.gen(function* () {
       const directory = path.join(path.parse(process.cwd()).root, "external-read")
       const requested = path.join(directory, "report final.txt")
@@ -847,7 +842,6 @@ describe("ReadTool", () => {
         }),
       ).toMatchObject({ status: "completed" })
       expect(assertions).toMatchObject([
-        { action: "external_directory", resources: [path.join(directory, "*").replaceAll("\\", "/")] },
         { action: "read", resources: [requested.replaceAll("\\", "/")] },
         { action: "read", resources: [recovered.replaceAll("\\", "/")] },
       ])
@@ -962,7 +956,7 @@ describe("ReadTool", () => {
           text: "Read directory src, entries 2-3\ncomponents/\nindex.ts\n[Output truncated. Continue reading with offset: 4]",
         },
       ])
-      expect(assertions).toMatchObject([{ sessionID, action: "read", resources: ["src"], save: ["*"] }])
+      expect(assertions).toMatchObject([{ sessionID, action: "read", resources: ["src"], save: [] }])
       expect(readCalls).toEqual([
         { input: AbsolutePath.make(path.join(process.cwd(), "src")), page: { offset: 2, limit: 10 } },
       ])
@@ -1141,11 +1135,11 @@ describe("ReadTool", () => {
 
           expect(assertions).toMatchObject([
             { sessionID, action: "skill", resources: ["guide"], save: ["guide"] },
-            { sessionID, action: "read", resources: ["skill://guide/references/style.md"], save: ["*"] },
+            { sessionID, action: "read", resources: ["skill://guide/references/style.md"], save: [] },
             { sessionID, action: "skill", resources: ["guide"], save: ["guide"] },
-            { sessionID, action: "read", resources: ["skill://guide"], save: ["*"] },
+            { sessionID, action: "read", resources: ["skill://guide"], save: [] },
             { sessionID, action: "skill", resources: ["guide"], save: ["guide"] },
-            { sessionID, action: "read", resources: ["skill://guide/missing.md"], save: ["*"] },
+            { sessionID, action: "read", resources: ["skill://guide/missing.md"], save: [] },
           ])
           expect(readCalls).toEqual([])
 

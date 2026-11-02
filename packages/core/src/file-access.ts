@@ -40,11 +40,6 @@ export interface Target {
 
 export type Invocation = Pick<Tool.Context, "sessionID" | "agent" | "messageID" | "id">
 
-export interface ReadOptions {
-  /** A target already authorized by this invocation, used for filename recovery. */
-  readonly siblingOf: Target
-}
-
 export interface Interface {
   /** Resolve a lexical path and its permission resources, without requesting approval. */
   readonly resolve: (input: ResolveInput) => Effect.Effect<Target, Environment.Failed>
@@ -54,11 +49,10 @@ export interface Interface {
     context: Invocation,
     metadata?: Permission.AssertInput["metadata"],
   ) => Effect.Effect<void, Permission.Error | SessionErrors.NotFoundError>
-  /** Resolve a read target and obtain external-directory approval before read approval. */
+  /** Resolve a read target and check the read rules. Reads are not gated by the project boundary. */
   readonly authorizeRead: (
     file: string,
     context: Invocation,
-    options?: ReadOptions,
   ) => Effect.Effect<Target, Environment.Failed | Permission.Error | SessionErrors.NotFoundError>
 }
 
@@ -141,20 +135,15 @@ const layer = Layer.effect(
       })
     })
 
-    const authorizeRead = Effect.fn("FileAccess.authorizeRead")(function* (
-      file: string,
-      context: Invocation,
-      options?: ReadOptions,
-    ) {
-      const target = yield* resolve({ path: file, kind: options ? "file" : undefined })
-      const sibling = options && path.dirname(target.absolute) === path.dirname(options.siblingOf.absolute)
+    const authorizeRead = Effect.fn("FileAccess.authorizeRead")(function* (file: string, context: Invocation) {
+      const target = yield* resolve({ path: file, kind: "file" })
 
-      // Filename recovery shares the directory approval, but checks the recovered file's own read rules.
-      if (!sibling) yield* authorizeExternal([target], context)
+      // Reads are free in and out of the project. The read rules still decide: an ordinary file falls
+      // through to the allow, while a configured secret or denied path asks or fails.
       yield* permission.assert({
         action: "read",
         resources: [target.resource],
-        save: ["*"],
+        save: [],
         ...invocation(context),
       })
       return target

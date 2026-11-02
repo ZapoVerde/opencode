@@ -71,7 +71,7 @@ export const Plugin = {
                 yield* permission.assert({
                   action: "read",
                   resources: [parsed.uri],
-                  save: ["*"],
+                  save: [],
                   sessionID: context.sessionID,
                   agent: context.agent,
                   source,
@@ -113,7 +113,7 @@ export const Plugin = {
                         Effect.orElseSucceed(() => undefined),
                       )
                       if (!alternate) return yield* missing(input.path, requested.absolute)
-                      const target = yield* access.authorizeRead(alternate, context, { siblingOf: requested })
+                      const target = yield* access.authorizeRead(alternate, context)
                       const content = yield* read(target).pipe(
                         Effect.catchIf(
                           (error) => error instanceof Environment.NotFound,

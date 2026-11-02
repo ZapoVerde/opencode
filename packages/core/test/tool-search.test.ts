@@ -244,7 +244,7 @@ describe("search tools", () => {
     ),
   )
 
-  it.live("requires external_directory approval for external grep files and directories", () =>
+  it.live("searches external grep files and directories without external_directory approval", () =>
     Effect.acquireUseRelease(
       Effect.promise(() => Promise.all([tmpdir(), tmpdir()])),
       ([active, outside]) => {
@@ -271,14 +271,7 @@ describe("search tools", () => {
           ),
           Effect.tap(() =>
             Effect.sync(() => {
-              expect(assertions.map((input) => input.action)).toEqual([
-                "external_directory",
-                "grep",
-                "external_directory",
-                "grep",
-              ])
-              expect(assertions[0]?.resources).toEqual([path.join(outside.path, "*").replaceAll("\\", "/")])
-              expect(assertions[2]?.resources).toEqual([path.join(outside.path, "*").replaceAll("\\", "/")])
+              expect(assertions.map((input) => input.action)).toEqual(["grep", "grep"])
             }),
           ),
         )
@@ -333,7 +326,7 @@ describe("search tools", () => {
     ),
   )
 
-  it.live("requires external_directory approval for an explicit external glob path", () =>
+  it.live("searches an explicit external glob path without external_directory approval", () =>
     Effect.acquireUseRelease(
       Effect.promise(() => Promise.all([tmpdir(), tmpdir()])),
       ([active, outside]) => {
@@ -349,8 +342,7 @@ describe("search tools", () => {
           Effect.tap((result) =>
             Effect.sync(() => {
               expect(result.status).toBe("completed")
-              expect(assertions.map((input) => input.action)).toEqual(["external_directory", "glob"])
-              expect(assertions[0]?.resources).toEqual([path.join(outside.path, "*").replaceAll("\\", "/")])
+              expect(assertions.map((input) => input.action)).toEqual(["glob"])
             }),
           ),
         )
@@ -359,6 +351,32 @@ describe("search tools", () => {
         Effect.promise(() =>
           Promise.all([active[Symbol.asyncDispose](), outside[Symbol.asyncDispose]()]).then(() => undefined),
         ),
+    ),
+  )
+
+  it.live("checks the read rules for a sensitive result path", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => {
+        const assertions: Permission.AssertInput[] = []
+        return Effect.promise(() => fs.writeFile(path.join(tmp.path, ".env"), "needle\n")).pipe(
+          Effect.andThen(
+            withTools(
+              tmp.path,
+              (registry) => executeTool(registry, call("grep", { path: ".", pattern: "needle" })),
+              assertions,
+            ),
+          ),
+          Effect.tap((result) =>
+            Effect.sync(() => {
+              expect(result.status).toBe("completed")
+              expect(assertions.map((input) => input.action)).toEqual(["grep", "read"])
+              expect(assertions[1]?.resources).toEqual([".env"])
+            }),
+          ),
+        )
+      },
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),
   )
 

@@ -20,6 +20,11 @@ export type Result = {
   directories: string[]
 }
 
+/** Observe the candidate file words of each statement, for callers that check path rules. */
+export interface Observe {
+  readonly files?: (words: readonly string[]) => void
+}
+
 const ARITY: Record<string, number> = {
   cat: 1,
   cd: 1,
@@ -161,7 +166,12 @@ const ARITY: Record<string, number> = {
 }
 const PREFIX_LENGTH = Math.max(...Object.values(ARITY))
 
-export function scan(command: string, shell: string, cwd: string): Effect.Effect<Result, Error> {
+export function scan(
+  command: string,
+  shell: string,
+  cwd: string,
+  observe?: Observe,
+): Effect.Effect<Result, Error> {
   return Effect.suspend(() => {
     const powershell = ShellSelect.ps(shell)
     const shellName = ShellSelect.name(shell)
@@ -175,6 +185,7 @@ export function scan(command: string, shell: string, cwd: string): Effect.Effect
     for (const item of scanned.commands) {
       // Declarations are skipped as standalone permission resources, while nested substitutions remain.
       if (item.declaration) continue
+      observe?.files?.(fileWords(item.rawWords))
       if (item.redirectPrefixEnd !== undefined) {
         const head = item.resource.slice(0, item.redirectPrefixEnd)
         const next = item.resource[item.redirectPrefixEnd]
@@ -252,6 +263,20 @@ export function scan(command: string, shell: string, cwd: string): Effect.Effect
       })
     }
     return Effect.succeed(output)
+  })
+}
+
+// Candidate file words for the read check: skip the command head, dynamic words, URLs and flags, taking
+// the value of `--name=value` and PowerShell `-Name:value`. The permission rules decide which of these
+// are special; this only decides what to ask about.
+function fileWords(words: readonly string[]) {
+  return words.slice(1).flatMap((raw) => {
+    const word = raw.replace(/^["']|["']$/g, "")
+    if (!word || word.includes("$") || word.includes("`") || word.includes("://")) return []
+    const separator = word.startsWith("-") ? Math.max(word.indexOf("="), word.indexOf(":")) : -1
+    const value = separator >= 0 ? word.slice(separator + 1) : word
+    if (!value || value.startsWith("-")) return []
+    return [value]
   })
 }
 

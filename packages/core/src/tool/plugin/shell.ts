@@ -15,6 +15,8 @@ import { Session } from "../../session.js"
 import { SessionSchema } from "../../session/schema.js"
 import { Shell } from "../../shell.js"
 import { ShellParse } from "../../shell/parse.js"
+import { ShellScan } from "../../shell/scan.js"
+import { PermissionSecret } from "../../permission/secret.js"
 import { ShellSelect } from "../../shell/select.js"
 import { ShellResult } from "../../shell/result.js"
 
@@ -120,7 +122,10 @@ export const Plugin = {
       const target = yield* access.resolve({ path: invocation.cwd, kind: "directory" })
       invocation.cwd = target.absolute
       const timeout = invocation.timeout
-      const parsed = yield* ShellParse.scan(invocation.command, invocation.shell, target.absolute)
+      const named: string[] = []
+      const parsed = yield* ShellParse.scan(invocation.command, invocation.shell, target.absolute, {
+        files: (words) => named.push(...words),
+      })
       const directories = yield* Effect.forEach(parsed.directories, (directory) =>
         access.resolve({
           path: FileAccess.resolvePath(target.absolute, directory),
@@ -141,26 +146,51 @@ export const Plugin = {
       // allow can never authorise `echo x > file`, and so secret and external-directory rules apply.
       // The shell decision comes first so a denied command never asks about its writes.
       const redirects = parsed.commands.flatMap((command) => command.redirects ?? [])
-      if (redirects.length > 0) {
-        // A device sink is not project data: reading it cannot leak a file and writing it cannot create one,
-        // so neither side of the redirect authorization applies.
-        const files = redirects.filter((redirect) => !deviceSink(redirect.word))
-        // An expanded target has no static path, so it keeps its raw text and the rules still decide.
-        const literal = files.filter((redirect) => !redirect.word.includes("$") && !redirect.word.includes("`"))
-        const targets = yield* Effect.forEach(literal, (redirect) =>
-          access.resolve({ path: FileAccess.resolvePath(target.absolute, redirect.word), kind: "file" }),
-        )
-        if (targets.length > 0) yield* access.authorizeExternal(targets, context)
-        const resource = (redirect: (typeof redirects)[number]) => {
-          const index = literal.indexOf(redirect)
-          return index >= 0 ? targets[index].resource : redirect.word
-        }
-        const shared = { sessionID: context.sessionID, agent: context.agent, source }
-        const reads = files.filter((item) => item.direction === "read").map(resource)
-        const writes = files.filter((item) => item.direction === "write").map(resource)
-        if (reads.length > 0) yield* permission.assert({ action: "read", resources: reads, ...shared })
-        if (writes.length > 0) yield* permission.assert({ action: "edit", resources: writes, ...shared })
-      }
+      const targets = redirects.length
+        ? yield* Effect.forEach(
+            redirects.filter(
+              (redirect) =>
+                !deviceSink(redirect.word) && !redirect.word.includes("$") && !redirect.word.includes("`"),
+            ),
+            (redirect) =>
+              access.resolve({ path: FileAccess.resolvePath(target.absolute, redirect.word), kind: "file" }),
+          )
+        : []
+      const resolved = new Map(
+        redirects
+          .filter(
+            (redirect) =>
+              !deviceSink(redirect.word) && !redirect.word.includes("$") && !redirect.word.includes("`"),
+          )
+          .map((redirect, index) => [redirect, targets[index]]),
+      )
+      const resource = (redirect: ShellScan.Redirect) => resolved.get(redirect)?.resource ?? redirect.word
+      // Only a write leaves the project; a read of an external file is ordinary read access.
+      const writeRedirects = redirects.filter((redirect) => !deviceSink(redirect.word) && redirect.direction === "write")
+      const writeTargets = writeRedirects.flatMap((redirect) => {
+        const value = resolved.get(redirect)
+
+        return value ? [value] : []
+      })
+      if (writeTargets.length > 0) yield* access.authorizeExternal(writeTargets, context)
+
+      // Every file a command names, redirects, or changes into is a read. The read rules decide: an
+      // ordinary path falls through to the allow, while a configured secret or denied path asks, so the
+      // trigger is the path rather than the command that happened to mention it.
+      const namedTargets = yield* Effect.forEach(named, (word) =>
+        access.resolve({ path: FileAccess.resolvePath(target.absolute, word), kind: "file" }),
+      )
+      const reads = [
+        ...new Set([
+          ...namedTargets.map((file) => file.resource),
+          ...redirects.filter((item) => item.direction === "read").map(resource),
+          ...directories.flatMap((directory) => [directory.resource, `${directory.resource}/*`]),
+        ]),
+      ].filter(PermissionSecret.mightBeSecret)
+      const shared = { sessionID: context.sessionID, agent: context.agent, source }
+      if (reads.length > 0) yield* permission.assert({ action: "read", resources: reads, save: [], ...shared })
+      const writes = writeRedirects.map(resource)
+      if (writes.length > 0) yield* permission.assert({ action: "edit", resources: writes, save: [], ...shared })
       // Approval can outlive the directory, so validate immediately before spawning.
       const workdir = yield* Environment.typeFollowing(environment.files, target.absolute).pipe(
         Effect.catchTag("Environment.NotFound", () =>

@@ -11,6 +11,7 @@ import { FileAccess } from "../../file-access.js"
 import { Ripgrep } from "../../ripgrep.js"
 import { RelativePath } from "../../schema.js"
 import { Permission } from "../../permission.js"
+import { PermissionSecret } from "../../permission/secret.js"
 
 export const name = "glob"
 
@@ -64,7 +65,6 @@ export const Plugin = {
               const searchPath = input.path === "undefined" || input.path === "null" ? undefined : input.path
               const source = { type: "tool" as const, messageID: context.messageID, id: context.id }
               const target = yield* access.resolve({ path: searchPath ?? ".", kind: "directory" })
-              yield* access.authorizeExternal([target], context)
               yield* permission.assert({
                 action: name,
                 resources: [input.pattern],
@@ -116,6 +116,18 @@ export const Plugin = {
                     ),
                   ),
                 )
+              const paths = [...new Set(entries.slice(0, limit).map((entry) => entry.path))].filter(
+                PermissionSecret.mightBeSecret,
+              )
+              if (paths.length > 0)
+                yield* permission.assert({
+                  action: "read",
+                  resources: paths,
+                  save: [],
+                  sessionID: context.sessionID,
+                  agent: context.agent,
+                  source,
+                })
               return { entries: entries.slice(0, limit), truncated: entries.length > limit }
             }).pipe(
               Effect.map((result) => ({
