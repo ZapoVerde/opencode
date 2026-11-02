@@ -292,6 +292,12 @@ describe("ShellTool scanner permissions", () => {
         const saved = yield* PermissionSaved.Service
         const location = yield* Location.Service
         yield* saved.add({ projectID: location.project.id, action: "shell", resources: ["printf *"] })
+        const writeAgents = yield* Agent.Service
+        yield* writeAgents.transform((editor) =>
+          editor.update(toolIdentity.agent, (agent) => {
+            agent.permissions = [{ action: "edit", resource: "*", effect: "allow" }]
+          }),
+        )
         const marker = path.join(fixture.active, "marker")
         const approved = yield* runPermissionCommand(
           registry,
@@ -358,7 +364,7 @@ describe("ShellTool scanner permissions", () => {
       }),
     ))
 
-  test("pipeline redirect keeps the redirect target visible to exact approval and denial", () =>
+  test("a pipeline redirect needs an edit grant on top of its shell command", () =>
     withScanner((registry, fixture) =>
       Effect.gen(function* () {
         const saved = yield* PermissionSaved.Service
@@ -366,23 +372,21 @@ describe("ShellTool scanner permissions", () => {
         yield* saved.add({ projectID: location.project.id, action: "shell", resources: ["printf hello", "cat"] })
         const marker = path.join(fixture.active, "marker")
         const command = "printf hello | cat > marker"
-        const unapprovedRedirect = yield* runPermissionCommand(registry, command, marker, ["reject"])
+
+        // Approving the shell command is not approving the file it writes.
+        const unapprovedRedirect = yield* runPermissionCommand(registry, command, marker, ["once", "reject"])
         expect(unapprovedRedirect.requests).toMatchObject([
           { action: "shell", resources: ["printf hello", "cat > marker"], save: ["printf *", "cat *"] },
+          { action: "edit", resources: ["marker"] },
         ])
         expect(yield* Effect.promise(() => Bun.file(marker).exists())).toBe(false)
 
         yield* saved.add({ projectID: location.project.id, action: "shell", resources: ["cat > marker"] })
+        yield* saved.add({ projectID: location.project.id, action: "edit", resources: ["marker"] })
+        yield* Effect.promise(() => fs.rm(marker, { force: true }))
         const exact = yield* runPermissionCommand(registry, command, marker, [])
         expect(exact.requests).toEqual([])
         expect(exact.exit).toMatchObject({ _tag: "Success", value: { status: "completed", metadata: { exit: 0 } } })
-        expect(yield* Effect.promise(() => Bun.file(marker).text())).toBe("hello")
-
-        yield* saved.add({ projectID: location.project.id, action: "shell", resources: ["printf *", "cat *"] })
-        yield* Effect.promise(() => fs.rm(marker))
-        const broad = yield* runPermissionCommand(registry, command, marker, [])
-        expect(broad.requests).toEqual([])
-        expect(broad.exit).toMatchObject({ _tag: "Success", value: { status: "completed", metadata: { exit: 0 } } })
         expect(yield* Effect.promise(() => Bun.file(marker).text())).toBe("hello")
 
         const agents = yield* Agent.Service
@@ -391,7 +395,7 @@ describe("ShellTool scanner permissions", () => {
             agent.permissions = [{ action: "shell", resource: "* > marker", effect: "deny" }]
           }),
         )
-        yield* Effect.promise(() => fs.rm(marker))
+        yield* Effect.promise(() => fs.rm(marker, { force: true }))
         const denied = yield* runPermissionCommand(registry, command, marker, [])
         expect(denied.requests).toEqual([])
         expect(denied.exit).toMatchObject({
@@ -408,7 +412,10 @@ describe("ShellTool scanner permissions", () => {
         const agents = yield* Agent.Service
         yield* agents.transform((editor) =>
           editor.update(toolIdentity.agent, (agent) => {
-            agent.permissions = [{ action: "shell", resource: "*", effect: "allow" }]
+            agent.permissions = [
+              { action: "shell", resource: "*", effect: "allow" },
+              { action: "edit", resource: "*", effect: "allow" },
+            ]
           }),
         )
         const marker = path.join(fixture.active, "marker")
@@ -451,6 +458,7 @@ describe("ShellTool scanner permissions", () => {
           editor.update(toolIdentity.agent, (agent) => {
             agent.permissions = [
               { action: "shell", resource: "*", effect: "allow" },
+              { action: "edit", resource: "*", effect: "allow" },
               { action: "external_directory", resource: "*", effect: "deny" },
             ]
           }),
@@ -539,6 +547,12 @@ describe("ShellTool conditional process substitution", () => {
             const saved = yield* PermissionSaved.Service
             const location = yield* Location.Service
             yield* saved.add({ projectID: location.project.id, action: "shell", resources: ["wait *"] })
+            const agents = yield* Agent.Service
+            yield* agents.transform((editor) =>
+              editor.update(toolIdentity.agent, (agent) => {
+                agent.permissions = [{ action: "edit", resource: "*", effect: "allow" }]
+              }),
+            )
             const marker = path.join(directory.active, "marker")
             const command = '[[ -n <(printf reached > marker) ]]; wait "$!"'
             const result = yield* runPermissionCommand(registry, command, marker, [reply])

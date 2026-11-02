@@ -11,6 +11,12 @@ export type OpaqueReason =
   | "unterminated-escape"
   | "unterminated-quote"
 
+/** A file a statement redirects to or from, as written before shell expansion. */
+export type Redirect = {
+  readonly direction: "read" | "write"
+  readonly word: string
+}
+
 type Command = {
   resource: string
   words: string[]
@@ -23,6 +29,8 @@ type Command = {
   redirectWordCount?: number
   // Exclusive prefix end relative to resource for commandless or group redirects.
   redirectPrefixEnd?: number
+  // File redirects, so a read-shaped allow cannot authorise a write.
+  redirects?: Redirect[]
 }
 
 // Opaque describes a parsing limitation, not a permission decision.
@@ -189,6 +197,9 @@ type BashState = {
   commandStart: number | undefined
   redirectWordCount: number | undefined
   redirectPrefixEnd: number | undefined
+  // File redirects seen for the statement being built, and the direction of the next target.
+  redirects: Redirect[]
+  redirectDirection: "read" | "write" | undefined
   // Posix shells such as Dash read `&>` as `&` and `>`, so later words would start another command there.
   ampersandRedirectWords: number | undefined
   commandWordIndex: number
@@ -291,8 +302,11 @@ function finishBashWord(state: BashState) {
     state.rawWords.push(state.input.slice(state.wordStart, state.wordEnd))
   }
   if (state.redirectTarget) {
-    if (!state.dupRedirect || !/^(?:\d+-?|-)$/.test(state.input.slice(state.wordStart, state.wordEnd)))
+    if (!state.dupRedirect || !/^(?:\d+-?|-)$/.test(state.input.slice(state.wordStart, state.wordEnd))) {
       state.hasFileRedirect = true
+      // A here-string's word is data, not a path, so it never reaches the filesystem.
+      if (!state.hereString && state.word) state.redirects.push({ direction: state.redirectDirection ?? "write", word: state.word })
+    }
     state.redirectPrefixEnd ??= state.wordEnd
   }
   state.redirectTarget = false
@@ -390,6 +404,7 @@ function finishBashCommand(state: BashState, boundary = false, newline = false) 
       ...(state.redirectWordCount !== undefined && state.redirectWordCount < state.words.length
         ? { redirectWordCount: state.redirectWordCount - name }
         : {}),
+      ...(state.redirects.length ? { redirects: [...state.redirects] } : {}),
     }
     state.commands.push(command)
     const builtin = bashBuiltinIndex(state)
@@ -457,6 +472,7 @@ function finishBashCommand(state: BashState, boundary = false, newline = false) 
         words: [prefixToken],
         rawWords: [prefixToken],
         redirectPrefixEnd: prefixEnd,
+        ...(state.redirects.length ? { redirects: [...state.redirects] } : {}),
       }
       state.commands.push(command)
       for (const heredoc of state.heredocs) {
@@ -482,6 +498,8 @@ function finishBashCommand(state: BashState, boundary = false, newline = false) 
   state.dupRedirect = false
   state.hasRedirect = false
   state.hasFileRedirect = false
+  state.redirects.length = 0
+  state.redirectDirection = undefined
   state.redirectWordCount = undefined
   state.redirectPrefixEnd = undefined
   state.ampersandRedirectWords = undefined
@@ -518,6 +536,8 @@ function scanBash(
     commandStart: undefined,
     redirectWordCount: undefined,
     redirectPrefixEnd: undefined,
+    redirects: [],
+    redirectDirection: undefined,
     ampersandRedirectWords: undefined,
     commandWordIndex: -1,
     assignmentWord: false,
@@ -746,6 +766,9 @@ function scanBashOperatorOrSeparator(
       return delimiter.end
     }
     if (" \t\n".includes(input[index + redirect.length] ?? "")) state.redirectPrefixEnd ??= index + redirect.length
+    // `<>` opens for both, so count it as a write; `<<<` feeds a word, not a path.
+    state.redirectDirection =
+      redirect.startsWith("<") && redirect !== "<>" && redirect !== "<<<" ? "read" : "write"
     state.redirectTarget = true
     state.dupRedirect = redirect === "<&" || redirect === ">&"
     state.hereString = redirect === "<<<"
