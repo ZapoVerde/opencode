@@ -142,8 +142,11 @@ export const Plugin = {
       // The shell decision comes first so a denied command never asks about its writes.
       const redirects = parsed.commands.flatMap((command) => command.redirects ?? [])
       if (redirects.length > 0) {
+        // A device sink is not project data: reading it cannot leak a file and writing it cannot create one,
+        // so neither side of the redirect authorization applies.
+        const files = redirects.filter((redirect) => !deviceSink(redirect.word))
         // An expanded target has no static path, so it keeps its raw text and the rules still decide.
-        const literal = redirects.filter((redirect) => !redirect.word.includes("$") && !redirect.word.includes("`"))
+        const literal = files.filter((redirect) => !redirect.word.includes("$") && !redirect.word.includes("`"))
         const targets = yield* Effect.forEach(literal, (redirect) =>
           access.resolve({ path: FileAccess.resolvePath(target.absolute, redirect.word), kind: "file" }),
         )
@@ -153,8 +156,8 @@ export const Plugin = {
           return index >= 0 ? targets[index].resource : redirect.word
         }
         const shared = { sessionID: context.sessionID, agent: context.agent, source }
-        const reads = redirects.filter((item) => item.direction === "read").map(resource)
-        const writes = redirects.filter((item) => item.direction === "write").map(resource)
+        const reads = files.filter((item) => item.direction === "read").map(resource)
+        const writes = files.filter((item) => item.direction === "write").map(resource)
         if (reads.length > 0) yield* permission.assert({ action: "read", resources: reads, ...shared })
         if (writes.length > 0) yield* permission.assert({ action: "edit", resources: writes, ...shared })
       }
@@ -305,4 +308,18 @@ export const Plugin = {
     yield* ctx.session.hook("compaction", hook)
     yield* ctx.session.hook("generate", hook)
   }),
+}
+
+// Device files that discard or echo output are not project data. Reading them cannot leak a file and writing
+// them cannot create one, so they stay outside the external-directory boundary.
+function deviceSink(word: string) {
+  const value = word.replaceAll("\\", "/").replace(/^["']|["']$/g, "")
+
+  return (
+    value === "/dev/null" ||
+    value === "/dev/zero" ||
+    value === "/dev/stdout" ||
+    value === "/dev/stderr" ||
+    value.startsWith("/dev/fd/")
+  )
 }
