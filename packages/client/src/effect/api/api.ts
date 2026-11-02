@@ -2036,6 +2036,7 @@ export type ServerToolControlToolExecuteInput = {
   readonly sessionID: Session.ID
   readonly tool: string
   readonly input: unknown
+  readonly messageID?: SessionMessage.ID | undefined
 }
 export type ServerToolControlToolExecuteOutput = {
   readonly location: Location.PublicRef

@@ -4285,6 +4285,7 @@ export type ServerToolControlToolExecuteInput = {
   readonly sessionID: string
   readonly tool: string
   readonly input: unknown
+  readonly messageID?: string | undefined
 }
 
 export type ServerToolControlToolExecuteOutput = {

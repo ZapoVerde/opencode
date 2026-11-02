@@ -1403,7 +1403,12 @@ const EndpointServerToolControlToolExecute =
     preserveEffect<ServerToolControlToolExecuteOutput>()(
       raw["toolControl.execute"]({
         query: { location: input["location"] },
-        payload: { sessionID: input["sessionID"], tool: input["tool"], input: input["input"] },
+        payload: {
+          sessionID: input["sessionID"],
+          tool: input["tool"],
+          input: input["input"],
+          messageID: input["messageID"],
+        },
       }).pipe(Effect.mapError(mapClientError)),
     )
 

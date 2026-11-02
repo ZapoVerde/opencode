@@ -19,7 +19,8 @@ export const ToolControlHandler = HttpApiBuilder.group(Api, "server.toolControl"
       const selection = yield* context.select(ctx.payload.sessionID).pipe(Effect.mapError((error) => new UnknownError({ message: error.message })))
       const definitions = new Map(selection.tools.definitions.map((item) => [item.name, item]))
       const result = yield* selection.tools.execute({
-        sessionID: selection.session.id, agent: selection.agent.id, messageID: SessionMessage.ID.create(),
+        sessionID: selection.session.id, agent: selection.agent.id,
+        messageID: ctx.payload.messageID ?? SessionMessage.ID.create(),
         call: { type: "tool-call", id: `control_${SessionMessage.ID.create()}`, name: ctx.payload.tool, input: ctx.payload.input }, definitions,
       }).pipe(Effect.mapError((error) => new UnknownError({ message: error.message })))
       return yield* response(Effect.succeed(result))

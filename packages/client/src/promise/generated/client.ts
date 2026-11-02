@@ -2238,7 +2238,12 @@ export function make(options: ClientOptions) {
               method: "POST",
               path: `/api/tool/execute`,
               query: { location: input["location"] },
-              body: { sessionID: input["sessionID"], tool: input["tool"], input: input["input"] },
+              body: {
+                sessionID: input["sessionID"],
+                tool: input["tool"],
+                input: input["input"],
+                messageID: input["messageID"],
+              },
               successStatus: 200,
               declaredStatuses: [400, 401, 404, 500],
               empty: false,

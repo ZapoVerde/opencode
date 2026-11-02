@@ -10022,7 +10022,17 @@
                   "tool": {
                     "type": "string"
                   },
-                  "input": {}
+                  "input": {},
+                  "messageID": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/Session.Message.ID"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
                 },
                 "required": ["sessionID", "tool", "input"],
                 "additionalProperties": false
