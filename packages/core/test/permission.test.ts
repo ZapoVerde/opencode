@@ -519,6 +519,46 @@ describe("Permission", () => {
     }),
   )
 
+  it.effect("offers the exact command for the session when the same ask repeats", () =>
+    Effect.gen(function* () {
+      yield* setup()
+      const service = yield* Permission.Service
+      const first = yield* waitForRequest({
+        id: Permission.ID.create("per_echo_once"),
+        action: "shell",
+        resources: ['echo "probe"'],
+      })
+      expect(first.request.scope).toBeUndefined()
+      yield* service.reply({ requestID: first.request.id, reply: "once" })
+      yield* Fiber.join(first.fiber)
+
+      const second = yield* waitForRequest({
+        id: Permission.ID.create("per_echo_repeat"),
+        action: "shell",
+        resources: ['echo "probe"'],
+      })
+      expect(second.request.scope).toEqual({ id: "command", label: "this command", resources: ['echo "probe"'] })
+      yield* service.reply({ requestID: second.request.id, reply: "session" })
+      yield* Fiber.join(second.fiber)
+
+      expect(
+        yield* service.ask(
+          assertion({
+            id: Permission.ID.create("per_echo_granted"),
+            action: "shell",
+            resources: ['echo "probe"'],
+          }),
+        ),
+      ).toMatchObject({ effect: "allow" })
+
+      const different = yield* service.ask(
+        assertion({ id: Permission.ID.create("per_ls"), action: "shell", resources: ["ls -la"] }),
+      )
+      expect(different).toMatchObject({ effect: "ask" })
+      yield* service.reply({ requestID: different.id, reply: "reject" })
+    }),
+  )
+
   it.effect("expires session approvals when the agent switches", () =>
     Effect.gen(function* () {
       yield* setup()

@@ -52,6 +52,25 @@ describe("permission session scope", () => {
     })
   })
 
+  test("scopes a repeated unrecognised command to its exact statements", () => {
+    expect(Permission.scope(shell(['echo "=== board ==="']))).toBeUndefined()
+    expect(Permission.scope(shell(['echo "=== board ==="']), { repeat: true })).toEqual({
+      id: "command",
+      label: "this command",
+      resources: ['echo "=== board ==="'],
+    })
+    expect(Permission.scope(shell(["cat a.txt", "tail -3"]), { repeat: true })).toEqual({
+      id: "command",
+      label: "these commands",
+      resources: ["cat a.txt", "tail -3"],
+    })
+  })
+
+  test("leaves commands whose text would read as a wildcard a one-time decision", () => {
+    expect(Permission.scope(shell(["rm -rf build/*"]), { repeat: true })).toBeUndefined()
+    expect(Permission.scope(shell(["cat file?.txt"]), { repeat: true })).toBeUndefined()
+  })
+
   test("scopes external directory work to the paths that asked", () => {
     expect(Permission.scope({ action: "external_directory", resources: ["/dev/*"] })).toEqual({
       id: "external",
