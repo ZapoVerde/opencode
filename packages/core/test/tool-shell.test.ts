@@ -406,6 +406,19 @@ describe("ShellTool scanner permissions", () => {
       }),
     ))
 
+  test("a redirect to a device sink needs no file approval", () =>
+    withScanner((registry, fixture) =>
+      Effect.gen(function* () {
+        const saved = yield* PermissionSaved.Service
+        const location = yield* Location.Service
+        yield* saved.add({ projectID: location.project.id, action: "shell", resources: ["printf *"] })
+        const marker = path.join(fixture.active, "marker")
+        const result = yield* runPermissionCommand(registry, "printf hello > /dev/null 2>&1", marker, [])
+        expect(result.requests).toEqual([])
+        expect(result.exit).toMatchObject({ _tag: "Success", value: { status: "completed" } })
+      }),
+    ))
+
   test("external-directory rejection stops execution before a workspace marker is written", () =>
     withScanner((registry, fixture) =>
       Effect.gen(function* () {
