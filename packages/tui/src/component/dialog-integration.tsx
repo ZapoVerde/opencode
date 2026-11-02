@@ -69,7 +69,6 @@ const OAUTH_CODE = /[A-Z0-9]{4}-[A-Z0-9]{4,5}/
 export function integrationOptions(list: IntegrationInfo[]) {
   return list.toSorted(
     (a, b) =>
-      Number(b.metadata?.source === "mcp") - Number(a.metadata?.source === "mcp") ||
       (INTEGRATION_PRIORITY[a.id] ?? 99) - (INTEGRATION_PRIORITY[b.id] ?? 99) ||
       a.name.localeCompare(b.name) ||
       a.id.localeCompare(b.id),
@@ -105,9 +104,12 @@ export function DialogIntegration(
   const dialog = useDialog()
   const theme = useTheme().surface("dialog")
   const location = currentLocation.ref ?? data.location.default()
+  // The MCP dialog signs its servers in through `integrationID`; the connect menu leaves them to it.
   const integrations = createMemo(() =>
-    integrationOptions(data.location.integration.list(location) ?? []).filter(
-      (integration) => props.integrationID === undefined || integration.id === props.integrationID,
+    integrationOptions(data.location.integration.list(location) ?? []).filter((integration) =>
+      props.integrationID === undefined
+        ? integration.metadata?.source !== "mcp"
+        : integration.id === props.integrationID,
     ),
   )
 
@@ -129,20 +131,17 @@ export function DialogIntegration(
       const credentials = credentialConnections(integration)
       let category = "Services"
       if (integration.id in INTEGRATION_PRIORITY) category = "Popular"
-      if (integration.metadata?.source === "mcp") category = "MCP"
       const status = integration.connections[0]?.status
       return {
         title: integration.name,
         value: integration.id,
         description: methods.length === 0 ? "Environment only" : undefined,
-        footer: status
-          ? "Sign in required →"
-          : connectionSummary(integration) || (integration.configured ? "Configured" : undefined),
+        footer: status ? "Sign in required →" : connectionSummary(integration) || undefined,
         footerColor: status ? theme.text.feedback.warning.base : undefined,
         category,
         disabled: methods.length === 0 && credentials.length === 0,
         gutter:
-          (integration.connections.length > 0 || integration.configured) && !status
+          integration.connections.length > 0 && !status
             ? () => <text fg={theme.text.feedback.success.base}>✓</text>
             : undefined,
         onSelect: () => {
@@ -1264,7 +1263,7 @@ async function connected(
     data.location.provider.sync(location),
   ])
   toast.show({ variant: "success", message: `Connected ${integration.name}` })
-  if (onConnected && integration.metadata?.source !== "mcp") {
+  if (onConnected) {
     onConnected(providerID(data, location, integration.id))
     return
   }

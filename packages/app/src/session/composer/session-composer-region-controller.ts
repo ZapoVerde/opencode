@@ -10,6 +10,7 @@ export function createSessionComposerRegionController(input: {
   centered: Accessor<boolean>
   onResponseSubmit: () => void
   openParent: () => void
+  focusPrompt: () => void
   setPromptRef: (el: HTMLDivElement) => void
   setDockRef: (el: HTMLDivElement) => void
   permissionAgent?: Accessor<PermissionAgent | undefined>
@@ -22,6 +23,7 @@ export function createSessionComposerRegionController(input: {
     centered: input.centered,
     onResponseSubmit: input.onResponseSubmit,
     openParent: input.openParent,
+    focusPrompt: input.focusPrompt,
     setPromptRef: input.setPromptRef,
     setDockRef: input.setDockRef,
     parentID: input.parentID,

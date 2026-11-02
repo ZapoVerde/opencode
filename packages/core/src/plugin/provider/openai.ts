@@ -27,6 +27,8 @@ const headlessMethodID = Integration.MethodID.make("chatgpt-headless")
 // Local patch: base gpt-5.6 stays available under ChatGPT OAuth, so only the generic version
 // check gates eligibility. gpt-5.5-pro is still excluded by that check.
 const codexDisallowed = new Set<string>([])
+// The image models the Codex client generates and edits with on the Codex login.
+const codexImageModels = new Set(["gpt-image-2"])
 
 type Pkce = {
   verifier: string
@@ -243,11 +245,16 @@ export const OpenAIPlugin = define({
       const credential = connection
         ? yield* ctx.integration.connection.resolve(connection).pipe(Effect.orElseSucceed(() => undefined))
         : undefined
+      const previous = chatgpt
       chatgpt =
         credential?.type === "oauth" &&
         (credential.methodID === browserMethodID || credential.methodID === headlessMethodID)
           ? credential
           : undefined
+      return (
+        (previous === undefined) !== (chatgpt === undefined) ||
+        previous?.metadata?.accountID !== chatgpt?.metadata?.accountID
+      )
     })
 
     yield* ctx.integration.transform((editor) => {
@@ -287,6 +294,11 @@ export const OpenAIPlugin = define({
             return
           }
           const apiID = draft.modelID ?? draft.id
+          if (draft.type === "image") {
+            if (codexImageModels.has(apiID)) draft.cost = []
+            else draft.enabled = false
+            return
+          }
           const match = apiID.match(/^gpt-(\d+)(?:\.(\d+))?/)
           const major = Number(match?.[1])
           const minor = Number(match?.[2] ?? 0)
@@ -321,7 +333,7 @@ export const OpenAIPlugin = define({
       })
     for (const name of ["context", "compaction"] as const)
       yield* ctx.session.hook(name, omitOutputLimit, { providerID: Provider.ID.openai })
-    const refresh = () => loading.withPermit(load().pipe(Effect.andThen(ctx.provider.reload())))
+    const refresh = () => loading.withPermit(load().pipe(Effect.flatMap((changed) => (changed ? ctx.provider.reload() : Effect.void))))
     yield* bus.subscribe(Credential.Event.Switched).pipe(
       Stream.filter((event) => event.data.integrationID === Integration.ID.make("openai")),
       Stream.runForEach(refresh),
