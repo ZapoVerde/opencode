@@ -252,7 +252,7 @@ Upstream still does not address any active patch as of `4423f42836`: there is no
 - **Status:** Applied
 - **Patch branch:** `fix/permission-review-abort-v2` (stacked on `feat/permission-remits-v2`)
 - **Patch commit:** `637a71dab7`
-- **Follow-up commit:** `46a2d451a2` (review-read guard and its e2e case; same content as integration's `4337f6dfbc`)
+- **Follow-up commits:** `46a2d451a2` (review-read guard and its e2e case; same content as integration's `4337f6dfbc`), `0cf19acf4e` (review prefetch and shared cache; same content as integration's `8fc9251bea`)
 - **Upstream base:** `upstream/dev` / `fa5b4bd618`
 - **Stacked on:** `feat/permission-remits-v2`, because it changes the reviewer wiring (`review(request, signal)`) that the remits patch introduced. It has no meaning without the app-side reviewer.
 - **Files:** `packages/app/src/session/requests/session-permission-dock.tsx`, `packages/app/src/session/requests/review-cache.ts` (new), `packages/app/src/session/requests/review-cache.test.ts` (new), `packages/app/src/session/requests/review-prefetch.ts` (new), `packages/app/src/runtime/server/runtime.tsx`, `packages/app/src/session/composer/region.tsx`, `packages/app/src/session/composer/session-composer-region-controller.ts`, `packages/app/src/session/composer/session-composer-region.tsx`, `packages/app/e2e/regression/session-request-docks.spec.ts`
