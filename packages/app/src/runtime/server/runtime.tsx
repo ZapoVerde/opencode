@@ -8,6 +8,7 @@ import { createServerSyncContext } from "./sync"
 import { createData, createSessionRetention } from "@opencode/client/solid"
 import type { ServerScope } from "@/runtime/server/scope"
 import { createPermissionAutoApprover } from "@/session/requests/auto-approve"
+import { createPermissionReviewPrefetcher } from "@/session/requests/review-prefetch"
 import { createServerNotificationState } from "@/shell/notifications/notification"
 import { createNotificationCoordinator } from "@/shell/notifications/coordinator"
 import { useCurrentRoute } from "@/shell/state/layout"
@@ -250,6 +251,7 @@ function createServerController(
 
   const sync = createServerSyncContext(sdk, data)
   createPermissionAutoApprover({ sdk, data })
+  createPermissionReviewPrefetcher({ sdk, data })
   const notification = createServerNotificationState({ sdk, data, key: connKey, coordinator: notificationCoordinator })
 
   // Projects whose repository has no root commit share the `global` ID; their name and icon stay local to the
