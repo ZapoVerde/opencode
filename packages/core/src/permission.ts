@@ -123,10 +123,13 @@ const layer = Layer.effect(
     // the project, and a restart or an agent switch forgets it. Grants are checked after the agent and
     // session rules, so they can widen an ask but can never override an agent deny.
     const grants = new Map<SessionSchema.ID, Permission.Ruleset>()
+    // Identical asks per session, so a repeat can offer the exact session scope a first ask cannot.
+    const asked = new Map<SessionSchema.ID, Map<string, number>>()
     const unsubscribe = yield* bus.listen((event) => {
       if (event.type !== SessionEvent.AgentSelected.type) return Effect.void
       // The event type check above owns this payload shape.
       grants.delete((event.data as { sessionID: SessionSchema.ID }).sessionID)
+      asked.delete((event.data as { sessionID: SessionSchema.ID }).sessionID)
       return Effect.void
     })
     yield* Effect.addFinalizer(() => unsubscribe)
@@ -190,6 +193,24 @@ const layer = Layer.effect(
       return { effect: event.effect, message: event.message, rules: all }
     })
 
+    // Repeats are counted per session and per exact ask, so the second identical request can offer an
+    // exact session scope while the first stays a one-time decision. Bounded so a long session cannot
+    // grow it without limit.
+    function repeatAsk(input: AssertInput) {
+      const key = [input.action, ...input.resources].join("\u0000")
+      const counts = asked.get(input.sessionID) ?? new Map<string, number>()
+      const previous = counts.get(key) ?? 0
+      counts.delete(key)
+      counts.set(key, previous + 1)
+      while (counts.size > 200) {
+        const oldest = counts.keys().next()
+        if (oldest.done) break
+        counts.delete(oldest.value)
+      }
+      asked.set(input.sessionID, counts)
+      return previous > 0
+    }
+
     function request(input: AssertInput, message?: string): Request {
       return {
         id: input.id ?? ID.create(),
@@ -197,7 +218,7 @@ const layer = Layer.effect(
         action: input.action,
         resources: input.resources,
         save: input.save,
-        scope: scope(input),
+        scope: scope(input, { repeat: repeatAsk(input) }),
         // Tools copy optional inputs straight into metadata; undefined values are not JSON and would
         // fail the HttpApi response encoder when clients list pending requests.
         metadata:

@@ -116,7 +116,7 @@ const families: readonly Family[] = [
   },
 ]
 
-export function scope(input: Input): Permission.Scope | undefined {
+export function scope(input: Input, options?: { repeat?: boolean }): Permission.Scope | undefined {
   if (input.action === "webfetch") return web(input.resources)
   if (input.action === "subagent") return exact("helper", "this helper", input.resources)
   if (input.action === "mcp") return exact("tool", "this tool", input.resources)
@@ -126,8 +126,25 @@ export function scope(input: Input): Permission.Scope | undefined {
   if (input.action !== "shell") return
 
   const family = families.find((item) => input.resources.every((resource) => item.match.test(resource.trim())))
-  if (!family) return
-  return { id: family.id, label: family.label, resources: [...family.resources] }
+  if (family) return { id: family.id, label: family.label, resources: [...family.resources] }
+  // The first ask of an unrecognised command is a one-time decision; once the same command asks again,
+  // let that exact statement be approved for the agent session.
+  if (!options?.repeat) return
+  return command(input.resources)
+}
+
+// A command with no safe family still asked once, so let that exact statement be approved for the agent
+// session. The matcher reads `*` and `?` in a rule as wildcards, so a statement carrying either cannot be
+// granted exactly and keeps asking one at a time.
+function command(resources: readonly string[]): Permission.Scope | undefined {
+  if (resources.length === 0) return
+  if (resources.some((resource) => /[*?]/.test(resource))) return
+
+  return {
+    id: "command",
+    label: resources.length === 1 ? "this command" : "these commands",
+    resources: [...resources],
+  }
 }
 
 function web(resources: readonly string[]): Permission.Scope | undefined {
