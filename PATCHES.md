@@ -225,6 +225,7 @@ Upstream still does not address any active patch as of `4423f42836`: there is no
 - **Status:** Applied
 - **Patch branch:** `feat/permission-remits-v2` (stacked on `fix/permission-actions-top-v2`; see the stacking note below)
 - **Patch commit:** `aaa7195371`
+- **Follow-up commit:** `ea5e1dd925` (external-directory session scope; same content as integration's `4dc9418c6e`)
 - **Upstream base:** `upstream/dev` / `fa5b4bd618`
 - **Stacked on:** `fix/permission-actions-top-v2`, because the dock summary/review markup replaces the header/measurement block that patch introduced. Originally landed loose on the integration branch; `feat/permission-remits-v2` is that change replayed onto the actions-top commit so the branch carries a complete, buildable deviation.
 - **Files:** `packages/schema/src/agent.ts`, `packages/schema/src/config/agent.ts`, `packages/schema/src/permission.ts`, `packages/core/src/config/plugin/agent.ts`, `packages/core/src/permission.ts`, `packages/core/src/permission/scope.ts` (new), `packages/core/src/plugin/agent.ts`, `packages/core/src/plugin/plan.ts`, `packages/core/test/permission.test.ts`, `packages/core/test/permission-scope.test.ts` (new), `packages/app/src/session/requests/session-permission-dock.tsx`, `packages/app/src/session/requests/permission-description.ts` (new), `packages/app/src/session/requests/permission-description.test.ts` (new), `packages/app/src/session/requests/permission-review.ts` (new), `packages/app/src/session/requests/model.ts`, `packages/app/src/session/requests/session-question-dock.tsx`, `packages/app/src/session/composer/region.tsx`, `packages/app/src/session/composer/session-composer-region-controller.ts`, `packages/app/src/session/composer/session-composer-region.tsx`, `packages/app/src/composer/{adapter,editor/editor,editor/interaction,model,selection}.ts*`, `packages/app/src/runtime/server/{types.ts,global-sync/utils.ts}`, `packages/app/src/runtime/i18n/en.ts`, `packages/client/src/promise/generated/types.ts`, `packages/session-ui/src/components/message-part.css`, `packages/app-harness/src/mock-server.ts`, `packages/app/e2e/regression/session-request-docks.spec.ts`, `.opencode/plugins/permission-reviewer.ts`
@@ -251,6 +252,7 @@ Upstream still does not address any active patch as of `4423f42836`: there is no
 - **Status:** Applied
 - **Patch branch:** `fix/permission-review-abort-v2` (stacked on `feat/permission-remits-v2`)
 - **Patch commit:** `637a71dab7`
+- **Follow-up commit:** `46a2d451a2` (review-read guard and its e2e case; same content as integration's `4337f6dfbc`)
 - **Upstream base:** `upstream/dev` / `fa5b4bd618`
 - **Stacked on:** `feat/permission-remits-v2`, because it changes the reviewer wiring (`review(request, signal)`) that the remits patch introduced. It has no meaning without the app-side reviewer.
 - **Files:** `packages/app/src/session/requests/session-permission-dock.tsx`, `packages/app/src/session/composer/region.tsx`, `packages/app/src/session/composer/session-composer-region-controller.ts`, `packages/app/src/session/composer/session-composer-region.tsx`
