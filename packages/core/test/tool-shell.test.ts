@@ -419,6 +419,51 @@ describe("ShellTool scanner permissions", () => {
       }),
     ))
 
+  test("a command that names a secret file asks for read approval", () =>
+    withScanner((registry, fixture) =>
+      Effect.gen(function* () {
+        const saved = yield* PermissionSaved.Service
+        const location = yield* Location.Service
+        yield* saved.add({ projectID: location.project.id, action: "shell", resources: ["printf *"] })
+        const marker = path.join(fixture.active, "marker")
+        const result = yield* runPermissionCommand(registry, "printf %s .env", marker, ["once"])
+
+        expect(result.requests).toMatchObject([{ action: "read", resources: [".env"] }])
+        expect(result.exit).toMatchObject({ _tag: "Success", value: { status: "completed" } })
+      }),
+    ))
+
+  test("a directory change into a secret directory asks for read approval", () =>
+    withScanner((registry, fixture) =>
+      Effect.gen(function* () {
+        const saved = yield* PermissionSaved.Service
+        const location = yield* Location.Service
+        yield* Effect.promise(() => fs.mkdir(path.join(fixture.active, ".secrets")))
+        yield* saved.add({ projectID: location.project.id, action: "shell", resources: ["printf *"] })
+        const marker = path.join(fixture.active, "marker")
+        const result = yield* runPermissionCommand(registry, "cd .secrets && printf ok", marker, ["once"])
+
+        expect(result.requests).toMatchObject([
+          { action: "read", resources: [".secrets", ".secrets/*"] },
+        ])
+        expect(result.exit).toMatchObject({ _tag: "Success", value: { status: "completed" } })
+      }),
+    ))
+
+  test("a command that only names ordinary files asks for nothing extra", () =>
+    withScanner((registry, fixture) =>
+      Effect.gen(function* () {
+        const saved = yield* PermissionSaved.Service
+        const location = yield* Location.Service
+        yield* saved.add({ projectID: location.project.id, action: "shell", resources: ["printf *"] })
+        const marker = path.join(fixture.active, "marker")
+        const result = yield* runPermissionCommand(registry, "printf %s hello", marker, [])
+
+        expect(result.requests).toEqual([])
+        expect(result.exit).toMatchObject({ _tag: "Success", value: { status: "completed" } })
+      }),
+    ))
+
   test("external-directory rejection stops execution before a workspace marker is written", () =>
     withScanner((registry, fixture) =>
       Effect.gen(function* () {

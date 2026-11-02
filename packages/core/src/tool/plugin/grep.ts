@@ -9,6 +9,7 @@ import { FileSystem } from "../../filesystem.js"
 import { Location } from "../../location.js"
 import { FileAccess } from "../../file-access.js"
 import { Permission } from "../../permission.js"
+import { PermissionSecret } from "../../permission/secret.js"
 import { Ripgrep } from "../../ripgrep.js"
 import { RelativePath } from "../../schema.js"
 
@@ -83,7 +84,6 @@ export const Plugin = {
             Effect.gen(function* () {
               const source = { type: "tool" as const, messageID: context.messageID, id: context.id }
               const target = yield* access.resolve({ path: input.path ?? "." })
-              yield* access.authorizeExternal([target], context)
               yield* permission.assert({
                 action: name,
                 resources: [input.pattern],
@@ -142,6 +142,18 @@ export const Plugin = {
                     ),
                   ),
                 )
+              const paths = [...new Set(matches.slice(0, limit).map((match) => match.entry.path))].filter(
+                PermissionSecret.mightBeSecret,
+              )
+              if (paths.length > 0)
+                yield* permission.assert({
+                  action: "read",
+                  resources: paths,
+                  save: [],
+                  sessionID: context.sessionID,
+                  agent: context.agent,
+                  source,
+                })
               return { matches: matches.slice(0, limit), truncated: matches.length > limit }
             }).pipe(
               Effect.map((result) => ({
