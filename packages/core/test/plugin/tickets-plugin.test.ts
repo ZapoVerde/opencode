@@ -69,10 +69,29 @@ it.live(
       const staged = yield* call("stage", "ticket_stage", { ticket: id, stage: "building" })
       expect(JSON.stringify(staged)).toContain("planned → building")
 
-      // building → superseded is allowed; abandoned is terminal, so moving out
-      // of it must surface the pure module's refusal instead of writing.
-      yield* call("abandon", "ticket_stage", { ticket: id, stage: "abandoned" })
-      const refused = yield* call("bad", "ticket_stage", { ticket: id, stage: "building" }).pipe(Effect.exit)
+      // The loop this shape forbids: deploy, check, find it wanting, reopen.
+      yield* call("ready", "ticket_stage", { ticket: id, stage: "ready-to-deploy" })
+      yield* call("deploy", "ticket_stage", { ticket: id, stage: "deployed" })
+      const reopen = yield* call("reopen", "ticket_stage", { ticket: id, stage: "building" }).pipe(Effect.exit)
+      expect(Exit.isFailure(reopen)).toBe(true)
+      expect(String(JSON.stringify(reopen))).toContain("cannot move from deployed to building")
+
+      // The follow-up is a new ticket that points back at what prompted it.
+      const followUp = yield* call("follow", "ticket_create", {
+        title: "Cap retries",
+        intent: "stop retrying after five attempts",
+      })
+      const followUpID = /tick_[a-z0-9]+/.exec(JSON.stringify(followUp))?.[0]
+      const related = yield* call("relate", "ticket_relation", {
+        ticket: followUpID,
+        relation: "fork",
+        target: id,
+      })
+      expect(JSON.stringify(related)).toContain(`${followUpID} fork ${id}`)
+
+      // abandoned is terminal, so leaving it must surface the refusal too.
+      yield* call("abandon", "ticket_stage", { ticket: followUpID, stage: "abandoned" })
+      const refused = yield* call("bad", "ticket_stage", { ticket: followUpID, stage: "building" }).pipe(Effect.exit)
       expect(Exit.isFailure(refused)).toBe(true)
       expect(String(JSON.stringify(refused))).toContain("cannot move from abandoned to building")
 
