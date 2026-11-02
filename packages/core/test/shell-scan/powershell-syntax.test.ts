@@ -2,6 +2,18 @@ import { describe, expect, test } from "bun:test"
 import { ShellScan } from "../../src/shell/scan.js"
 
 describe("PowerShell practical syntax", () => {
+  const redirectCases: Array<[string, ShellScan.Redirect[] | undefined]> = [
+    ["Write-Output hi > out.txt", [{ direction: "write", word: "out.txt" }]],
+    ["echo hi >> log.txt", [{ direction: "write", word: "log.txt" }]],
+    ["Get-ChildItem 2>&1", undefined],
+  ]
+  test.each(redirectCases)("records file redirections and ignores descriptor merges: %s", (command, redirects) => {
+    const result = ShellScan.scanPowerShell(command)
+    expect(result.kind).toBe("scanned")
+    if (result.kind !== "scanned") throw new Error(result.reason)
+    expect(result.commands[0]?.redirects).toEqual(redirects)
+  })
+
   test.each([
     ["$result = git status", ["git status"]],
     ["$result += (git status)", ["git status"]],
