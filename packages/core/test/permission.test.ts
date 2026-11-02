@@ -413,6 +413,43 @@ describe("Permission", () => {
     }),
   )
 
+  it.effect("grants the requested external paths for the session", () =>
+    Effect.gen(function* () {
+      yield* setup()
+      const service = yield* Permission.Service
+      const selected = yield* waitForRequest({ action: "external_directory", resources: ["/dev/*"] })
+
+      expect(selected.request.scope).toEqual({
+        id: "external",
+        label: "external access",
+        resources: ["/dev/*"],
+      })
+      yield* service.reply({ requestID: selected.request.id, reply: "session" })
+      yield* Fiber.join(selected.fiber)
+
+      expect(
+        yield* service.ask(
+          assertion({
+            id: Permission.ID.create("per_dev"),
+            action: "external_directory",
+            resources: ["/dev/null"],
+          }),
+        ),
+      ).toMatchObject({ effect: "allow" })
+
+      // The grant covers the paths that asked, not the rest of the filesystem.
+      const outside = yield* service.ask(
+        assertion({
+          id: Permission.ID.create("per_etc"),
+          action: "external_directory",
+          resources: ["/etc/passwd"],
+        }),
+      )
+      expect(outside).toMatchObject({ effect: "ask" })
+      yield* service.reply({ requestID: outside.id, reply: "reject" })
+    }),
+  )
+
   it.effect("expires session approvals when the agent switches", () =>
     Effect.gen(function* () {
       yield* setup()

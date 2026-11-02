@@ -51,4 +51,17 @@ describe("permission session scope", () => {
       resources: ["github:*"],
     })
   })
+
+  test("scopes external directory work to the paths that asked", () => {
+    expect(Permission.scope({ action: "external_directory", resources: ["/dev/*"] })).toEqual({
+      id: "external",
+      label: "external access",
+      resources: ["/dev/*"],
+    })
+    expect(Permission.scope({ action: "external_directory", resources: ["/dev/*", "/tmp/*"] })).toEqual({
+      id: "external",
+      label: "external access",
+      resources: ["/dev/*", "/tmp/*"],
+    })
+  })
 })

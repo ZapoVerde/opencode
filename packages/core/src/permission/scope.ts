@@ -120,6 +120,9 @@ export function scope(input: Input): Permission.Scope | undefined {
   if (input.action === "webfetch") return web(input.resources)
   if (input.action === "subagent") return exact("helper", "this helper", input.resources)
   if (input.action === "mcp") return exact("tool", "this tool", input.resources)
+  // Work outside the project is approved against the exact paths that asked, so a session grant
+  // covers the directory that keeps prompting without widening to the rest of the filesystem.
+  if (input.action === "external_directory") return exact("external", "external access", input.resources)
   if (input.action !== "shell") return
 
   const family = families.find((item) => input.resources.every((resource) => item.match.test(resource.trim())))
