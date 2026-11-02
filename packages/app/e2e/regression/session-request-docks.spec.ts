@@ -299,6 +299,55 @@ test("keeps the session mounted while a permission review is in flight", async (
   await expect(permission.getByRole("button", { name: "Allow external access for this agent" })).toBeVisible()
 })
 
+test("reviews a pending permission before its session is opened", async ({ page }) => {
+  const otherID = "ses_request_review_prefetch"
+  const reviews: { sessionID: string; prompt: string }[] = []
+  const workspace = await mockWorkspace(page, {
+    name: "RequestDocks",
+    directory,
+    sessions: [
+      { id: sessionID, title },
+      { id: otherID, title: "Review prefetch" },
+    ],
+    seed: { tabs: [sessionID] },
+    generate: (input) => {
+      reviews.push(input)
+
+      return { text: "Why: It continues the deploy.\nWhat: It pushes the branch.\nScope: Git push for this agent." }
+    },
+    sessionPermissions: {
+      [otherID]: [
+        {
+          id: "permission-prefetch",
+          sessionID: otherID,
+          permission: "shell",
+          patterns: ["git push origin dev"],
+          metadata: {},
+          always: [],
+        },
+      ],
+    },
+  })
+
+  await page.goto(sessionHref(sessionID))
+  await expectSessionTitle(page, title)
+
+  await workspace.push([
+    {
+      id: "evt_permission_prefetch",
+      created: 1700000000000,
+      type: "permission.asked",
+      location: { directory },
+      data: { id: "permission-prefetch", sessionID: otherID, action: "shell", resources: ["git push origin dev"] },
+    },
+  ])
+
+  // The ask belongs to a session no tab has open; its brief is generated before anyone looks at it.
+  await expect.poll(() => reviews.length).toBe(1)
+  expect(reviews[0]?.sessionID).toBe(otherID)
+  expect(reviews[0]?.prompt).toContain("git push origin dev")
+})
+
 test("surfaces the decisions when a long permission request arrives over the composer", async ({ page }) => {
   const sessionPermissions: Record<string, unknown[]> = { [sessionID]: [] }
   const workspace = await mockServer(page, { sessionPermissions })

@@ -1,4 +1,4 @@
-import { For, Show, createResource, onCleanup, onMount } from "solid-js"
+import { For, Show, createSignal, onCleanup, onMount } from "solid-js"
 import type { PermissionRequest } from "@opencode/client/promise"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
 import { makeEventListener } from "@solid-primitives/event-listener"
@@ -8,21 +8,9 @@ import { DockPrompt } from "@opencode/session-ui/dock-prompt"
 import { Icon } from "@opencode/ui/icon"
 import { useLanguage } from "@/runtime/i18n/language"
 import { describePermission } from "./permission-description"
+import { cachedReview, reviewInFlight, startReview } from "./review-cache"
 
 type PermissionAgent = { id: string; name: string; remit?: string }
-
-// Switching away and back must not start a second model review for the same pending request.
-const reviewCache = new Map<string, string>()
-const reviewCacheLimit = 50
-
-function rememberReview(id: string, text: string) {
-  reviewCache.delete(id)
-  reviewCache.set(id, text)
-  for (const oldest of reviewCache.keys()) {
-    if (reviewCache.size <= reviewCacheLimit) break
-    reviewCache.delete(oldest)
-  }
-}
 
 export function SessionPermissionDock(props: {
   request: PermissionRequest
@@ -37,34 +25,25 @@ export function SessionPermissionDock(props: {
   const description = () => describePermission(props.request, props.agent?.id)
   const t = (key: string) => language.t(key as Parameters<typeof language.t>[0])
   let reviewAbort: AbortController | undefined
-  // A review follows the open dock. Switching sessions or requests must abort it, or the stale model call keeps
-  // holding a browser connection and the next session waits behind it.
+  const [reviewFailed, setReviewFailed] = createSignal(false)
+  // A review follows the open dock. A call this dock started is abandoned on unmount so a stale model call
+  // does not outlive the session; a prefetched one is shared, so it keeps running for the next surface.
   onCleanup(() => abort(reviewAbort))
-  const [review] = createResource(
-    () =>
-      props.review && !props.request.message && !reviewCache.has(props.request.id) ? props.request.id : undefined,
-    () => {
-      const cached = reviewCache.get(props.request.id)
-      if (cached) return Promise.resolve(cached)
-      abort(reviewAbort)
-      const controller = new AbortController()
-      reviewAbort = controller
-      return (props.review?.(props.request, controller.signal) ?? Promise.resolve("")).then((text) => {
-        if (text.trim() && !controller.signal.aborted) rememberReview(props.request.id, text)
-        return text
-      })
-    },
-  )
+  onMount(() => {
+    const review = props.review
 
-  // Reading `review()` while it loads suspends the reader, and the nearest boundary is the whole route, so an open
-  // permission blanks the session until the review model answers. Read the brief only once it has settled.
-  const reviewText = () => {
-    const loaded = review.state === "ready" || review.state === "refreshing"
+    if (!review || props.request.message || cachedReview(props.request.id) || reviewInFlight(props.request.id)) return
+    const controller = new AbortController()
+    reviewAbort = controller
+    void startReview(props.request.id, () => review(props.request, controller.signal)).then((text) => {
+      if (!text && !controller.signal.aborted && !cachedReview(props.request.id)) setReviewFailed(true)
+    })
+  })
 
-    return (reviewCache.get(props.request.id) ?? (loaded ? review.latest : undefined) ?? props.request.message ?? "")
-      .trim()
-      .slice(0, 1200)
-  }
+  // Reading the brief must never suspend: the nearest Suspense boundary is the whole route, so a pending
+  // review used to blank the session until the model answered.
+  const reviewText = () => (cachedReview(props.request.id) ?? props.request.message ?? "").trim().slice(0, 1200)
+  const reviewing = () => reviewInFlight(props.request.id)
 
   let root: HTMLDivElement | undefined
   let measuring: number | undefined
@@ -158,12 +137,12 @@ export function SessionPermissionDock(props: {
           <Show when={description().consequence}>
             {(key) => <div data-slot="permission-consequence">{t(key())}</div>}
           </Show>
-          <Show when={reviewText() || review.loading || review.error}>
+          <Show when={reviewText() || reviewing() || reviewFailed()}>
             <div data-slot="permission-review">
               <div data-slot="permission-review-title">{language.t("permission.reviewer")}</div>
               <div data-slot="permission-review-text">
                 {reviewText() ||
-                  (review.loading
+                  (reviewing()
                     ? language.t("permission.reviewer.loading")
                     : language.t("permission.reviewer.unavailable"))}
               </div>
