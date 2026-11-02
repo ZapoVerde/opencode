@@ -259,6 +259,46 @@ test("shows a pending permission dock", async ({ page }) => {
   await expect(page.locator('[data-component="composer"]')).toBeVisible()
 })
 
+test("keeps the session mounted while a permission review is in flight", async ({ page }) => {
+  await mockServer(page, {
+    // The reviewer is a model call; hold it so the screen has to render without its answer.
+    generate: () => new Promise(() => {}),
+    pageMessages: () => ({
+      items: [
+        {
+          id: "msg_review_context",
+          type: "user",
+          text: "Check the deploy before running it",
+          time: { created: 1700000000000 },
+        },
+      ],
+    }),
+    sessionPermissions: {
+      [sessionID]: [
+        {
+          id: "permission-reviewing",
+          sessionID,
+          permission: "external_directory",
+          patterns: ["/dev/*"],
+          metadata: {},
+          always: [],
+          scope: { id: "external", label: "external access", resources: ["/dev/*"] },
+        },
+      ],
+    },
+  })
+
+  await page.goto(sessionHref(sessionID))
+  await expectSessionTitle(page, title)
+
+  const permission = page.locator('[data-component="dock-prompt"][data-kind="permission"]')
+  await expect(permission).toBeVisible()
+  await expect(permission.getByText("Reviewing…")).toBeVisible()
+  // Reading the pending review used to suspend the route into its empty fallback, which replaced the screen.
+  await expect(page.getByText("Check the deploy before running it")).toBeVisible()
+  await expect(permission.getByRole("button", { name: "Allow external access for this agent" })).toBeVisible()
+})
+
 test("surfaces the decisions when a long permission request arrives over the composer", async ({ page }) => {
   const sessionPermissions: Record<string, unknown[]> = { [sessionID]: [] }
   const workspace = await mockServer(page, { sessionPermissions })
@@ -428,7 +468,10 @@ test("restores the draft caret before typing after a request dock closes", async
 
 function mockServer(
   page: Page,
-  requests: Pick<WorkspaceInput, "sessionPermissions" | "onPermissionReply" | "forms" | "pageMessages">,
+  requests: Pick<
+    WorkspaceInput,
+    "sessionPermissions" | "onPermissionReply" | "forms" | "pageMessages" | "generate"
+  >,
 ) {
   return mockWorkspace(page, { name: "RequestDocks", directory, sessions: [{ id: sessionID, title }], ...requests })
 }
