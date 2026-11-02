@@ -256,6 +256,10 @@ describe("ShellScan lexical provenance", () => {
           resource: source,
           words: ["git", "status", "a b", ""],
           rawWords: ['g"it"', "'status'", "a\\ b", '""'],
+          redirects: [
+            { direction: "write", word: "error log" },
+            { direction: "write", word: "output" },
+          ],
         },
       ],
     })
@@ -264,7 +268,14 @@ describe("ShellScan lexical provenance", () => {
   test("does not mistake quoted assignment-like words or fd numbers for shell syntax", () => {
     expect(ShellScan.scan(`F"OO"=bar '123'>out`)).toEqual({
       kind: "scanned",
-      commands: [{ resource: `F"OO"=bar '123'>out`, words: ["FOO=bar", "123"], rawWords: ['F"OO"=bar', "'123'"] }],
+      commands: [
+        {
+          resource: `F"OO"=bar '123'>out`,
+          words: ["FOO=bar", "123"],
+          rawWords: ['F"OO"=bar', "'123'"],
+          redirects: [{ direction: "write", word: "out" }],
+        },
+      ],
     })
   })
 

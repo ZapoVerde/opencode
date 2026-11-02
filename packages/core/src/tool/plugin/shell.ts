@@ -137,6 +137,27 @@ export const Plugin = {
           agent: context.agent,
           source,
         })
+      // A redirect is a file read or write, not just shell text. Assert it as one so a read-shaped
+      // allow can never authorise `echo x > file`, and so secret and external-directory rules apply.
+      // The shell decision comes first so a denied command never asks about its writes.
+      const redirects = parsed.commands.flatMap((command) => command.redirects ?? [])
+      if (redirects.length > 0) {
+        // An expanded target has no static path, so it keeps its raw text and the rules still decide.
+        const literal = redirects.filter((redirect) => !redirect.word.includes("$") && !redirect.word.includes("`"))
+        const targets = yield* Effect.forEach(literal, (redirect) =>
+          access.resolve({ path: FileAccess.resolvePath(target.absolute, redirect.word), kind: "file" }),
+        )
+        if (targets.length > 0) yield* access.authorizeExternal(targets, context)
+        const resource = (redirect: (typeof redirects)[number]) => {
+          const index = literal.indexOf(redirect)
+          return index >= 0 ? targets[index].resource : redirect.word
+        }
+        const shared = { sessionID: context.sessionID, agent: context.agent, source }
+        const reads = redirects.filter((item) => item.direction === "read").map(resource)
+        const writes = redirects.filter((item) => item.direction === "write").map(resource)
+        if (reads.length > 0) yield* permission.assert({ action: "read", resources: reads, ...shared })
+        if (writes.length > 0) yield* permission.assert({ action: "edit", resources: writes, ...shared })
+      }
       // Approval can outlive the directory, so validate immediately before spawning.
       const workdir = yield* Environment.typeFollowing(environment.files, target.absolute).pipe(
         Effect.catchTag("Environment.NotFound", () =>

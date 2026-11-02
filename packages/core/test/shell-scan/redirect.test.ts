@@ -110,7 +110,11 @@ describe("Bash redirect resource oracle", () => {
     })
     expect(result.commands[2]).toMatchObject({ resource: "printf output", rawWords: ["printf", "output"] })
     const parsed = await Effect.runPromise(ShellParse.scan(source, "/bin/bash", "/workspace"))
-    expect(parsed.commands[1]).toEqual({ resource: 'git >"$(printf output)" status', save: "git *" })
+    expect(parsed.commands[1]).toEqual({
+      resource: 'git >"$(printf output)" status',
+      save: "git *",
+      redirects: [{ direction: "write", word: "$(printf output)" }],
+    })
     expect(Wildcard.match(parsed.commands[1]!.resource, parsed.commands[1]!.save)).toBe(true)
   })
 
@@ -123,7 +127,7 @@ describe("Bash redirect resource oracle", () => {
     const parsed = await Effect.runPromise(ShellParse.scan(source, "/bin/bash", "/workspace"))
     expect(parsed.commands).toEqual([
       { resource: "pwd", save: "pwd *" },
-      { resource: "cat\\\n >out", save: "cat *" },
+      { resource: "cat\\\n >out", save: "cat *", redirects: [{ direction: "write", word: "out" }] },
     ])
   })
 
@@ -135,7 +139,11 @@ describe("Bash redirect resource oracle", () => {
       if (result.kind !== "scanned") throw new Error(result.reason)
       expect(result.commands[0]?.rawWords).toEqual(["cat"])
       const parsed = await Effect.runPromise(ShellParse.scan(source, "/bin/bash", "/workspace"))
-      expect(parsed.commands[0]).toEqual({ resource: source.includes(">out") ? "cat >out" : "cat", save: "cat *" })
+      expect(parsed.commands[0]).toEqual({
+        resource: source.includes(">out") ? "cat >out" : "cat",
+        save: "cat *",
+        ...(source.includes(">out") ? { redirects: [{ direction: "write", word: "out" }] } : {}),
+      })
       expect(parsed.commands.every((command) => Wildcard.match(command.resource, command.save))).toBe(true)
     },
   )
@@ -156,7 +164,24 @@ describe("Bash redirect resource oracle", () => {
     const parsed = await Effect.runPromise(ShellParse.scan(source, "/bin/bash", "/workspace"))
     expect(parsed.commands).toEqual([
       { resource: "printf ok", save: "printf *" },
-      { resource: "FOO=bar >output git status 3>tail", save: "git status *" },
+      {
+        resource: "FOO=bar >output git status 3>tail",
+        save: "git status *",
+        redirects: [
+          { direction: "write", word: "output" },
+          { direction: "write", word: "tail" },
+        ],
+      },
+    ])
+  })
+
+  test("records input redirections apart from writes and ignores descriptor duplication", async () => {
+    const parsed = await Effect.runPromise(
+      ShellParse.scan("grep secret < .env > out 2>&1", "/bin/bash", "/workspace"),
+    )
+    expect(parsed.commands[0]?.redirects).toEqual([
+      { direction: "read", word: ".env" },
+      { direction: "write", word: "out" },
     ])
   })
 

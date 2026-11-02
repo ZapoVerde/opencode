@@ -16,7 +16,7 @@ const POWERSHELL_LITERAL_FLAG_RE = /^-(?:lp|l(?:i(?:t(?:e(?:r(?:a(?:l(?:p(?:a(?:
 const POWERSHELL_STACK_FLAG_RE = /^-(?:stack(?:name|nam|na|n)?|st):?$/i
 
 export type Result = {
-  commands: Array<{ resource: string; save: string }>
+  commands: Array<{ resource: string; save: string; redirects?: ShellScan.Redirect[] }>
   directories: string[]
 }
 
@@ -179,7 +179,11 @@ export function scan(command: string, shell: string, cwd: string): Effect.Effect
         const head = item.resource.slice(0, item.redirectPrefixEnd)
         const next = item.resource[item.redirectPrefixEnd]
         const separator = next === "\t" || next === "\n" ? next : " "
-        output.commands.push({ resource: item.resource, save: `${head}${separator}*` })
+        output.commands.push({
+          resource: item.resource,
+          save: `${head}${separator}*`,
+          ...(item.redirects?.length ? { redirects: item.redirects } : {}),
+        })
         continue
       }
       const words = item.redirectWordCount === undefined ? item.rawWords : item.rawWords.slice(0, item.redirectWordCount)
@@ -244,6 +248,7 @@ export function scan(command: string, shell: string, cwd: string): Effect.Effect
       output.commands.push({
         resource: item.resource,
         save,
+        ...(item.redirects?.length ? { redirects: item.redirects } : {}),
       })
     }
     return Effect.succeed(output)
