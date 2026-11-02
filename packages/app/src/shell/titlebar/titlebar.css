@@ -184,3 +184,13 @@
     animation-range: calc(100% - 1.1px) calc(100% - 1px);
   }
 }
+
+/* The Tickets entry carries the same warning dot a waiting tab does. */
+[data-slot="mobile-tabs-attention"],
+[data-action="home-tickets"] [data-slot="home-tickets-attention"] {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: var(--v2-state-fg-warning);
+}

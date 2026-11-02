@@ -41,6 +41,7 @@ export function HomeProjects(props: {
       onOpenSettings={props.projects.utility.settings}
       onOpenHelp={props.projects.utility.help}
       onOpenUsage={props.projects.utility.usage}
+      onOpenTickets={props.projects.utility.tickets}
     />
   )
 }

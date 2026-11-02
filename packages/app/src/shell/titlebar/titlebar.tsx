@@ -36,6 +36,7 @@ import { RecentlyClosedTabsMenu } from "./recently-closed-tabs-menu"
 import { useSettingsDialog } from "@/settings/command"
 import { rootSession } from "@/shell/routes/session"
 import { TitlebarItems, useTitlebarItems } from "@/runtime/plugin/titlebar-items"
+import { ticketsAttention } from "@/tickets/attention"
 
 export const newTabCommand = { id: "tab.new", keybind: "mod+t,mod+n" }
 
@@ -771,6 +772,21 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
                                 >
                                   <Icon name="window-analytics" size="small" />
                                   {language.t("sidebar.usage")}
+                                </button>
+                                <button
+                                  type="button"
+                                  data-action="mobile-tabs-tickets"
+                                  class="flex h-11 shrink-0 items-center gap-2 rounded-[6px] px-2 text-[13px] leading-4 text-v2-text-text-faint hover:bg-v2-background-bg-layer-02 focus-visible:outline-none focus-visible:bg-v2-background-bg-layer-02"
+                                  onClick={() => {
+                                    setMobileTabs("open", false)
+                                    openPath("/tickets/")
+                                  }}
+                                >
+                                  <Icon name="review" size="small" />
+                                  {language.t("sidebar.tickets")}
+                                  <Show when={ticketsAttention() > 0}>
+                                    <span data-slot="mobile-tabs-attention" data-mark="attention" aria-hidden="true" />
+                                  </Show>
                                 </button>
                               </Show>
                               <button

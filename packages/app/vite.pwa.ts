@@ -29,11 +29,13 @@ export function serviceWorker(directory: string) {
       inlineWorkboxRuntime: true,
       navigateFallback: "/index.html",
       // Pairing links must reach the server so it can set the session cookie.
-      // `/usage/` is a separate server-rendered page, so it must reach the network instead of the app shell.
+      // `/usage/` and `/tickets/` are separate server-rendered pages, so they
+      // must reach the network instead of the app shell.
       navigateFallbackDenylist: [
         /^\/(?:api|auth)(?:\/|$)/,
         /^\/(?:_assets|assets)(?:\/|$)/,
         /^\/usage(?:\/|$)/,
+        /^\/tickets(?:\/|$)/,
       ],
       // Include lazy chunks and non-JS dependencies, not just the startup bundle.
       globPatterns: ["**/*"],

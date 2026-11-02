@@ -19,6 +19,7 @@ import type { HomeProjectSelection, LocalProject } from "@/shell/state/layout"
 import { ServerConnection } from "@/runtime/server/registry"
 import { useLanguage } from "@/runtime/i18n/language"
 import { usePlatform } from "@/runtime/platform/platform"
+import { ticketsAttention } from "@/tickets/attention"
 import { ServerRowMenuView, serverMenuLabels } from "@/servers/registry/row-menu"
 import { ServerHealthIndicator } from "@/servers/registry/row"
 import { type ServerHealth } from "@/runtime/server/health"
@@ -71,6 +72,7 @@ export type HomeProjectsViewProps = {
   onOpenSettings: () => void
   onOpenHelp: () => void
   onOpenUsage: () => void
+  onOpenTickets: () => void
 }
 
 export function HomeProjectsView(props: HomeProjectsViewProps) {
@@ -322,6 +324,7 @@ function HomeProjectsPanel(props: HomeProjectsViewProps) {
         onOpenSettings={props.onOpenSettings}
         onOpenHelp={props.onOpenHelp}
         onOpenUsage={props.onOpenUsage}
+        onOpenTickets={props.onOpenTickets}
         language={props.language}
       />
     </aside>
@@ -333,6 +336,7 @@ export function HomeUtilityNav(props: {
   onOpenSettings: () => void
   onOpenHelp: () => void
   onOpenUsage: () => void
+  onOpenTickets: () => void
   language: ReturnType<typeof useLanguage>
 }) {
   const platform = usePlatform()
@@ -357,6 +361,18 @@ export function HomeUtilityNav(props: {
         >
           <Icon name="window-analytics" size="small" />
           <span class={HOME_PROJECT_NAV_LABEL}>{props.language.t("sidebar.usage")}</span>
+        </HomeProjectNavButton>
+        <HomeProjectNavButton
+          type="button"
+          data-action="home-tickets"
+          class="text-v2-text-text-faint [&>[data-slot=icon-svg]]:text-v2-icon-icon-muted"
+          onClick={props.onOpenTickets}
+        >
+          <Icon name="review" size="small" />
+          <span class={HOME_PROJECT_NAV_LABEL}>{props.language.t("sidebar.tickets")}</span>
+          <Show when={ticketsAttention() > 0}>
+            <span data-slot="home-tickets-attention" data-mark="attention" aria-hidden="true" />
+          </Show>
         </HomeProjectNavButton>
       </Show>
       <HomeProjectNavButton

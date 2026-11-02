@@ -56,6 +56,7 @@ export function Home() {
           onOpenSettings={projects.utility.settings}
           onOpenHelp={projects.utility.help}
           onOpenUsage={projects.utility.usage}
+          onOpenTickets={projects.utility.tickets}
           language={projects.copy.language}
         />
       </div>

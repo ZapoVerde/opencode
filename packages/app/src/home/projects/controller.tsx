@@ -171,6 +171,7 @@ export function createHomeProjectsController(home: HomeController) {
       settings: openSettings,
       help: () => platform.openExternal("https://opencode.ai/desktop-feedback"),
       usage: () => openPath("/usage/"),
+      tickets: () => openPath("/tickets/"),
     },
   }
 }
