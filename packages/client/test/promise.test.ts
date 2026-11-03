@@ -21,6 +21,7 @@ test("exposes every standard HTTP API group", () => {
     "form",
     "permission",
     "file",
+    "server.toolControl",
     "command",
     "skill",
     "rpc",
