@@ -117,7 +117,11 @@ export const baseTranscript = (input: {
       SystemPart.make(
         input.agent.system
           ? input.agent.system
-          : SessionSystemPrompt.make(input.tools.definitions.map((tool) => tool.name)),
+          : SessionSystemPrompt.make(input.tools.definitions.map((tool) => tool.name), {
+              id: input.agent.id,
+              name: input.agent.name,
+              remit: input.agent.remit,
+            }),
       ),
       {
         ...SystemPart.make(Instructions.join(input.initial)),

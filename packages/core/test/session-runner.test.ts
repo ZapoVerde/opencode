@@ -125,7 +125,11 @@ const testModel = (id: string, limit: ModelLimit = defaultModelLimit) => {
   return LanguageModel.make({ id, provider: "fake", route: OpenAIChat.route })
 }
 const model = testModel("fake-model")
-const defaultSystem = SessionSystemPrompt.make([])
+// The runner names the agent at the top of the harness prompt, so the expected
+// value is the same prompt with the identity the fixture's session resolves to.
+const systemFor = (agentID: string) =>
+  SessionSystemPrompt.make([], { id: Agent.ID.make(agentID), name: Agent.Name.make(agentID) })
+const defaultSystem = systemFor("build")
 const identity = (providerID: string, id: string) =>
   ["# Your Model", `- Name: ${id}`, `- Provider ID: ${providerID}`, `- Model ID: ${id}`].join("\n")
 const fakeIdentity = identity("fake", "fake-model")
@@ -2122,9 +2126,11 @@ describe("SessionRunnerLLM", () => {
     })
     yield* s.runPrompt("Second")
 
+    // The prompt names the agent that answered, so the switch is visible in the
+    // prompt itself and not only in the skill block.
     expect(s.requests.map((request) => request.system.map((part) => part.text))).toEqual([
-      [defaultSystem, fakeIdentity, "Build skills\n\nInitial context"],
-      [defaultSystem, fakeIdentity, "Build skills\n\nInitial context"],
+      [systemFor("build"), fakeIdentity, "Build skills\n\nInitial context"],
+      [systemFor("reviewer"), fakeIdentity, "Build skills\n\nInitial context"],
     ])
     expect(systemTexts(s.requests[1])).toContainEqual(expect.stringContaining("Reviewer skills"))
   })
