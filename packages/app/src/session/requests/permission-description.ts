@@ -45,6 +45,10 @@ const categories: ReadonlyArray<{ category: Category; pattern: RegExp }> = [
   },
 ]
 
+// The commands whose arguments name a host. Used only to decide which statements to read for targets,
+// so it must stay the same set the network category matches.
+const networkTool = /^(?:curl|wget|ssh|scp|rsync|nc|socat|telnet|ftp|ping)$/i
+
 const summaries: Record<Category, string> = {
   privileged: "permission.summary.shell.privileged",
   secrets: "permission.summary.shell.secrets",
@@ -143,7 +147,44 @@ export function describePermission(
 
 export function categorize(resources: readonly string[]): Category {
   const command = resources.join("\n")
-  return categories.find((item) => item.pattern.test(command))?.category ?? "default"
+  const category = categories.find((item) => item.pattern.test(command))?.category ?? "default"
+  // A request against the loopback interface never leaves this machine, so "Use the internet" would
+  // overstate it. Judge each statement, because "curl localhost/health && echo ok" stays here while
+  // "curl localhost/health && curl elsewhere" does not.
+  if (category !== "network") return category
+  const targets = command
+    .split(/[;&|\n]+/)
+    .map((statement) => statement.trim().split(/\s+/))
+    .filter((words) => networkTool.test(words[0] ?? ""))
+    .map((words) => words.map(host).filter((item): item is string => item !== undefined))
+  // No network statement to judge, or one whose target cannot be read (an unexpanded variable, a bare
+  // remote name), is not evidence that the command stays local.
+  if (targets.length === 0) return "network"
+  return targets.every((hosts) => hosts.length > 0 && hosts.every(isLocalHost)) ? "default" : "network"
+}
+
+// The host a token names when it names one plainly: an absolute URL, an authority with a port, or a bare
+// loopback name or IP literal. Anything else, such as a bare remote name or an unexpanded variable, is
+// not evidence that the command stays local.
+function host(token: string) {
+  const word = token.replace(/^["']|["']$/g, "")
+  const url = /^[a-z][a-z0-9+.-]*:\/\/(?:[^@/?#]*@)?(\[[^\]]+\]|[^/:?#]+)/i.exec(word)
+  if (url) return url[1]
+  const authority = /^([a-z0-9.-]+):\d+(?:\/|$)/i.exec(word)
+  if (authority) return authority[1]
+  if (/^(?:localhost|(?:\d{1,3}\.){3}\d{1,3}|\[[0-9a-f:]+\])$/i.test(word)) return word
+}
+
+function isLocalHost(host: string) {
+  const value = host.toLowerCase().replace(/^\[|\]$/g, "")
+  return (
+    value === "localhost" ||
+    value === "::" ||
+    value === "::1" ||
+    value === "0.0.0.0" ||
+    value.endsWith(".localhost") ||
+    /^127(?:\.\d{1,3}){3}$/.test(value)
+  )
 }
 
 function isSecret(resources: readonly string[]) {
