@@ -37,7 +37,7 @@ it.live(
       const tools = yield* Tool.Service
 
       const module = yield* Effect.promise(() => import(path.join(PLUGIN_DIR, "server.ts")))
-      yield* PluginPromise.fromPromise(module.default).effect(yield* PluginHost.make(plugins))
+      yield* PluginPromise.fromPromise(module.default).effect(yield* PluginHost.make(plugins, "tickets"))
 
       expect((yield* tools.list()).map((tool) => tool.name).sort()).toEqual([
         "ticket_artifact",

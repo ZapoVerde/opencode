@@ -114,11 +114,6 @@ export const Plugin = {
     const permission = yield* Permission.Service
 
     const prepare = Effect.fn("ShellTool.prepare")(function* (invocation: ShellCreateBefore, context: Tool.Context) {
-      const source = {
-        type: "tool" as const,
-        messageID: context.messageID,
-        id: context.id,
-      }
       const target = yield* access.resolve({ path: invocation.cwd, kind: "directory" })
       invocation.cwd = target.absolute
       const timeout = invocation.timeout
@@ -138,9 +133,7 @@ export const Plugin = {
           action: name,
           resources: parsed.commands.map((command) => command.resource),
           save: parsed.commands.map((command) => command.save),
-          sessionID: context.sessionID,
-          agent: context.agent,
-          source,
+          ...Permission.invocation(context),
         })
       // A redirect is a file read or write, not just shell text. Assert it as one so a read-shaped
       // allow can never authorise `echo x > file`, and so secret and external-directory rules apply.
@@ -187,7 +180,7 @@ export const Plugin = {
           ...directories.flatMap((directory) => [directory.resource, `${directory.resource}/*`]),
         ]),
       ].filter(PermissionSecret.mightBeSecret)
-      const shared = { sessionID: context.sessionID, agent: context.agent, source }
+      const shared = Permission.invocation(context)
       if (reads.length > 0) yield* permission.assert({ action: "read", resources: reads, save: [], ...shared })
       const writes = writeRedirects.map(resource)
       if (writes.length > 0) yield* permission.assert({ action: "edit", resources: writes, save: [], ...shared })

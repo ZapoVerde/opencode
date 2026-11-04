@@ -12,6 +12,7 @@ import { Permission } from "../../permission.js"
 import { PermissionSecret } from "../../permission/secret.js"
 import { Ripgrep } from "../../ripgrep.js"
 import { RelativePath } from "../../schema.js"
+import { ToolSearch } from "../search.js"
 
 export const name = "grep"
 
@@ -82,7 +83,6 @@ export const Plugin = {
           output: Output,
           execute: (input, context) =>
             Effect.gen(function* () {
-              const source = { type: "tool" as const, messageID: context.messageID, id: context.id }
               const target = yield* access.resolve({ path: input.path ?? "." })
               yield* permission.assert({
                 action: name,
@@ -96,53 +96,33 @@ export const Plugin = {
                   caseSensitive: input.caseSensitive,
                   limit: input.limit,
                 },
-                sessionID: context.sessionID,
-                agent: context.agent,
-                source,
+                ...Permission.invocation(context),
               })
               const root = target.absolute
-              const type = yield* Environment.typeFollowing(environment.files, root).pipe(
-                Effect.catchTag("Environment.NotFound", () =>
-                  Effect.fail(new ToolFailure({ message: `Search path does not exist: ${input.path ?? "."}` })),
-                ),
-              )
+              const type = yield* ToolSearch.pathType(environment.files, root, input.path ?? ".")
               const cwd = type === "directory" ? root : path.dirname(root)
-              const limit = input.limit ?? FileSystem.DEFAULT_SEARCH_LIMIT
-              const matches = yield* ripgrep
-                .grep({
+              const result = yield* ToolSearch.bounded(input.limit ?? FileSystem.DEFAULT_SEARCH_LIMIT, (limit) =>
+                ripgrep.grep({
                   cwd,
                   pattern: input.pattern,
                   file: type === "file" ? path.basename(root) : undefined,
                   include: input.include,
                   literal: input.literal,
                   caseSensitive: input.caseSensitive,
-                  limit: limit + 1,
-                })
-                .pipe(
-                  Effect.timeoutOrElse({
-                    duration: FileSystem.DEFAULT_SEARCH_TIMEOUT_MS,
-                    orElse: () =>
-                      Effect.fail(
-                        new ToolFailure({
-                          message: `Search timed out after ${FileSystem.DEFAULT_SEARCH_TIMEOUT_MS / 1_000} seconds. Consider using a more specific path or pattern.`,
-                        }),
-                      ),
+                  limit,
+                }),
+              )
+              const matches = result.items.map((match) =>
+                FileSystem.Match.make({
+                  ...match,
+                  entry: FileSystem.Entry.make({
+                    ...match.entry,
+                    path: RelativePath.make(path.relative(location.directory, path.resolve(cwd, match.entry.path))),
                   }),
-                  Effect.map((result) =>
-                    result.map((match) =>
-                      FileSystem.Match.make({
-                        ...match,
-                        entry: FileSystem.Entry.make({
-                          ...match.entry,
-                          path: RelativePath.make(
-                            path.relative(location.directory, path.resolve(cwd, match.entry.path)),
-                          ),
-                        }),
-                      }),
-                    ),
-                  ),
-                )
-              const paths = [...new Set(matches.slice(0, limit).map((match) => match.entry.path))].filter(
+                }),
+              )
+              // A recursive search must not surface a secret just because the pattern matched it.
+              const paths = [...new Set(matches.map((match) => match.entry.path))].filter(
                 PermissionSecret.mightBeSecret,
               )
               if (paths.length > 0)
@@ -150,11 +130,9 @@ export const Plugin = {
                   action: "read",
                   resources: paths,
                   save: [],
-                  sessionID: context.sessionID,
-                  agent: context.agent,
-                  source,
+                  ...Permission.invocation(context),
                 })
-              return { matches: matches.slice(0, limit), truncated: matches.length > limit }
+              return { matches, truncated: result.truncated }
             }).pipe(
               Effect.map((result) => ({
                 output: result.matches,
