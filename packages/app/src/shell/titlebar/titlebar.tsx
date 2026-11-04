@@ -741,6 +741,7 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
 
                                 if (index !== -1) tabsStoreActions.closeTab(index)
                               }}
+                              onCloseTabs={(items, keep) => tabsStoreActions.closeTabs(items.map(tabKey), keep)}
                               onReorder={(keys) => tabsStoreActions.reorder(keys)}
                             />
                           </div>
@@ -845,6 +846,7 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
 
                             if (index !== -1) tabsStoreActions.closeTab(index)
                           }}
+                          onCloseTabs={(items, keep) => tabsStoreActions.closeTabs(items.map(tabKey), keep)}
                           onReorder={(keys) => tabsStoreActions.reorder(keys)}
                         />
                         <RecentlyClosedTabsMenu
@@ -927,6 +929,7 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
 
                                       if (index !== -1) tabsStoreActions.closeTab(index)
                                     }}
+                                    onCloseTabs={(items, keep) => tabsStoreActions.closeTabs(items.map(tabKey), keep)}
                                     onReorder={(keys) => tabsStoreActions.reorder(keys)}
                                   />
                                 }

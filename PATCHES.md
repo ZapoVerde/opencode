@@ -12,7 +12,14 @@ The repository `patches/` directory is OpenCode dependency/package patch machine
 
 Workspace base: `b2e6e764a88dbcc9231a2ac1f73d011817f80f98` (`upstream/v2` at workspace creation on 2026-09-12).
 
-Current upstream base: `ffe6fed583` (`upstream/dev` merged 2026-11-04, 91 commits since `4423f42836`, 835 files).
+Current upstream base: `5a750e64a2` (`upstream/dev` merged 2026-11-04, 6 commits since `ffe6fed583`, 61 files).
+
+The 2026-11-04 follow-up merge applied with one conflict:
+
+- `packages/app/e2e/regression/tabs.spec.ts` conflicted on the harness import rewrite again. Upstream added `openWithDirection`, so the file keeps the `@opencode/app-harness/*` imports and takes `openWithDirection` from `@opencode/app-harness/direction`. Every other patched file (`shell/titlebar/titlebar.tsx`, `runtime/i18n/en.ts`, `core/src/plugin/internal.ts`, `packages/protocol/openapi.json`, the generated client types) auto-merged, and the new `websearch.use` policy action and `console.poll` option landed beside the local policy work.
+- Generated artifacts were regenerated with `bun run generate` in `packages/protocol`, then `packages/client`.
+
+Verification for the follow-up merge: root `bun run check` passes 37/37 and `bun run typecheck:tsc` 34/34. `packages/core` `bun run script/test.ts test/permission.test.ts test/permission-scope.test.ts test/shell-scan/redirect.test.ts test/tool-search.test.ts` passes 213/213 with a system `rg` on `PATH`, `packages/app` `test:unit` passes 967/967, and `packages/app` `typecheck:e2e` still reports upstream's own 12. No patch was retired, and no ledger entry needed a content change: this merge touched no patched behaviour, only one harness import line.
 
 The 2026-11-04 merge applied with 42 conflicted files:
 
