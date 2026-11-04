@@ -5,7 +5,10 @@
     "emitDeclarationOnly": false,
     "noEmit": true,
     "rootDir": "../..",
-    "types": ["node", "bun"]
+    // The e2e program pulls in app and ui source, which import CSS, SVG and `import.meta.glob`.
+    // The e2e performance Vite configs used to supply these ambient types transitively; they were
+    // deleted upstream when benchmarks moved to packages/app/perf (strobe).
+    "types": ["node", "bun", "vite/client"]
   },
   "include": ["./**/*.ts", "./**/*.tsx", "../component-tests/**/*.ts", "../perf/**/*.ts", "../src/types.ts"]
 }
