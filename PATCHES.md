@@ -29,6 +29,8 @@ Verification for the 2026-11-04 merge: root `bun run check` passes 37/37 and `bu
 
 No patch was retired in the 2026-11-04 merge. Upstream still has no native tool-control endpoint, no base `gpt-5.6` allowance under OpenAI OAuth (`codexDisallowed = new Set<string>([])` locally), no environment fallback in `packages/cli/src/version.ts`, no designer agent, no unknown-route catch-all, no Usage or Tickets entry point, no `data-keyboard` / visual-viewport sizing, no harness move out of `packages/app/e2e`, and no default release time for config-defined models. On permissions specifically, upstream has no `Permission.Scope`, no `session` reply, no agent `remit`, and no per-agent ask log.
 
+Patch-branch audit for this merge: the integration branch carried three commits with no patch branch. `0e161ae296` (agent identity) now has `feat/agent-identity`, cut from `ffe6fed583` and verified to reproduce the integration content for its four files; `54750d4be5` and `158cf637db` (tool-control message id) remain integration-only. A full re-cut of every patch branch onto `ffe6fed583` was started and stopped: the patch commits were written against older upstream trees, so `feat/designer-agent`, `fix/mobile-enter-newline-v2`, `fix/unknown-route-fallback-v2`, `feat/home-usage-link` and `fix/luna-oauth-model-filtering-v2` conflict in files the integration branch has already resolved, and `fix/custom-model-release-time-v2` (19 commits since its merge-base) and `tickets-phase-1-replay` (57) are not clean single-patch branches at all. Re-cutting them correctly means re-deriving each patch's hunks from the integration tree and verifying that cherry-picking the set rebuilds it, which is separate work. Until then the patch branches are archival: the last three upstream merges were resolved directly on `opencode2-v2-patched`, not rebuilt from them.
+
 Previous merge `4423f42836` (`upstream/dev` merged 2026-11-02, 431 commits since `fa5b4bd618`). Upstream moved its default branch from `v2` to `dev`: `v2` stopped at `4617210822` on 2026-10-10, `dev` is the mainline that releases are cut from (`v2.1.1` differs from `dev` by 114 files), and `beta` is a separate app-rewrite line (1,356 files ahead, including a different session-ui and desktop implementation) that was not merged.
 
 The 2026-11-02 merge applied with 19 conflicted files:
@@ -108,6 +110,7 @@ Upstream still does not address any active patch as of `4423f42836`: there is no
 - **Patch branch:** `feat/native-tool-control-v2`
 - **Upstream base:** `upstream/v2` / `b2e6e764a88dbcc9231a2ac1f73d011817f80f98`
 - **Patch commit:** `388cc88b42f75fbf2efe38a0d8dff1a44e743429`
+- **Follow-up commits:** `54750d4be5` (let callers supply the message id) and `158cf637db` (keep that id on the wire in the client test). Both are on the integration branch only: the patch branch still stops at `388cc88b42`, because its generated protocol and client artifacts are based on `upstream/v2` and the follow-ups were authored against the newer tree.
 - **Files:** `packages/protocol/src/api.ts`, `packages/protocol/src/groups/tool-control.ts`, `packages/server/src/handlers.ts`, `packages/server/src/handlers/tool-control.ts`
 - **Problem:** OpenCode has a model-independent `Tool.Snapshot.execute` boundary but no authenticated external API for direct native-tool control.
 - **Fix:** Expose location-scoped tool discovery and session-scoped native tool execution through the existing HTTP API, preserving OpenCode tool schemas, permissions, hooks, and execution semantics without invoking a model.
@@ -222,6 +225,18 @@ Upstream still does not address any active patch as of `4423f42836`: there is no
 - **Fix:** Add `vite/client` to the e2e project's `types`. The e2e program then resolves CSS, SVG and glob imports the same way the app project does.
 - **Verification:** From `packages/app`, `bun run typecheck:e2e` drops from 176 errors to 12, and all 12 are upstream's own stale e2e spec types (`composer`, `review`, `session-panel-scrollbar`, `settings`, `timeline-geometry`, `timeline-stream`). The same 176 was reproduced on a clean `upstream/dev` worktree before the change, so the 163 were not merge damage.
 - **When updating:** Retire this if upstream adds `vite/client` to `packages/app/e2e/tsconfig.json` or restores a Vite config under `packages/app/e2e`. If upstream fixes its own e2e spec types, the remaining 12 should also disappear; do not paper over those with this patch.
+
+#### Agent identity in the system prompt
+
+- **Status:** Applied
+- **Patch branch:** `feat/agent-identity`
+- **Upstream base:** `upstream/dev` / `ffe6fed583`
+- **Patch commit:** `0e161ae296` (re-cut as `1a279640f5`)
+- **Files:** `packages/core/src/session/system-prompt.ts`, `packages/core/src/session/model-request.ts`, `packages/core/test/session-system-prompt.test.ts` (new), `packages/core/test/session-runner.test.ts`
+- **Problem:** Nothing in the default system prompt named the agent. An agent that reached a command outside its remit had no way to notice, so it asked the user instead of checking against its own job.
+- **Fix:** `SessionSystemPrompt.make` takes an optional identity and prepends a banner in the same shape the permission dock uses: the agent name, then its one-sentence remit when configured. An agent with an explicit `system` keeps its own prompt unchanged, because that prompt is already its authored identity. The runner passes the selected agent's identity when it builds the prompt, so an agent switch is visible in the prompt itself and not only in the skill block.
+- **Verification:** From `packages/core`, `bun run script/test.ts test/session-system-prompt.test.ts test/session-runner.test.ts` passes 251/251. The branch was re-cut onto `ffe6fed583` and its diff for the four files is identical to the integration tree.
+- **When updating:** Check whether upstream names the selected agent in the default prompt. Retire this if it does. Keep the explicit-`system` exemption: replacing an authored prompt is not the same as adding a banner to the shared one.
 
 #### Home screen Usage link
 
