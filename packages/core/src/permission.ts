@@ -150,9 +150,10 @@ const layer = Layer.effect(
     const saved = yield* PermissionSaved.Service
     const hooks = yield* PluginHooks.Service
     const pending = new Map<ID, Pending>()
-    // A session approval is deliberately process-local: it lasts for the current agent's session, not
-    // the project, and a restart or an agent switch forgets it. Grants are checked after the agent and
-    // session rules, so they can widen an ask but can never override an agent deny.
+    // A session approval is deliberately process-local: it lasts for the current agent's session and
+    // the subagents that session spawns, not the project, and a restart or an agent switch forgets it.
+    // Grants are checked after the agent and session rules, so they can widen an ask but can never
+    // override an agent deny.
     const grants = new Map<SessionSchema.ID, Permission.Ruleset>()
     // Identical asks per session, so a repeat can offer the exact session scope a first ask cannot.
     const asked = new Map<SessionSchema.ID, Map<string, number>>()
@@ -201,8 +202,24 @@ const layer = Layer.effect(
       const agent = yield* agents.resolve(agentID ?? session.agent)
       return {
         agent: agent?.id,
+        session,
         rules: merge(agent?.permissions ?? missingAgentPermissions, session.permissions ?? []),
       }
+    })
+
+    // A session approval covers the session that gave it and the subagents that session spawns. A
+    // child runs in a fresh session, so without this a "session" answer lasts only until the next
+    // child asks the same question. The nearest session's grants win, so build the chain root first.
+    const sessionRules = Effect.fnUntraced(function* (session: SessionSchema.Info) {
+      const chain = [session]
+      let current = session
+      while (current.parentID) {
+        const parent = yield* sessions.get(current.parentID)
+        if (!parent) break
+        chain.push(parent)
+        current = parent
+      }
+      return chain.reverse().flatMap((item) => grants.get(item.id) ?? [])
     })
 
     function denied(input: Pick<Request, "action" | "resources">, rules: Permission.Ruleset) {
@@ -213,48 +230,98 @@ const layer = Layer.effect(
       return rules.filter((rule) => Wildcard.match(input.action, rule.action))
     }
 
-    const evaluateInput = Effect.fnUntraced(function* (input: AssertInput) {
-      const configuration = yield* configured(input.sessionID, input.agent)
-      const rules = configuration.rules
-      if (denied(input, rules)) return { effect: "deny" as const, message: undefined, rules }
-      const all = [...rules, ...(grants.get(input.sessionID) ?? []), ...(yield* savedRules())]
-      const matched = input.resources.map((resource) => ({ resource, rule: match(input.action, resource, all) }))
-      const asking = matched.find((item) => (item.rule?.effect ?? "ask") === "ask")
-      const effect: Permission.Effect = asking ? "ask" : "allow"
-      const event = yield* hooks.trigger("permission", "evaluate", {
-        sessionID: input.sessionID,
-        agent: input.agent,
-        action: input.action,
-        resources: input.resources,
-        metadata: input.metadata,
-        source: input.source,
-        effect,
+    type Layer = { readonly source: "agent" | "session" | "saved"; readonly rules: Permission.Ruleset }
+
+    // Layers are ordered by precedence, so the winning rule is the last layer that matches.
+    function winner(action: string, resource: string, layers: ReadonlyArray<Layer>) {
+      for (let index = layers.length - 1; index >= 0; index -= 1) {
+        const rule = match(action, resource, layers[index].rules)
+        if (rule) return { rule, source: layers[index].source }
+      }
+      return undefined
+    }
+
+    interface Verdict {
+      readonly effect: Permission.Effect
+      readonly message?: string
+      readonly rules: Permission.Ruleset
+      readonly agent?: Agent.ID
+      readonly session: SessionSchema.Info
+      readonly cause?: PermissionLog.Cause
+      readonly rule?: PermissionLog.Rule
+      readonly asker?: string
+      readonly grant?: PermissionLog.Grant
+    }
+
+    const evaluateInput: (input: AssertInput) => Effect.Effect<Verdict, SessionErrors.NotFoundError> =
+      Effect.fnUntraced(function* (input: AssertInput) {
+        const configuration = yield* configured(input.sessionID, input.agent)
+        const rules = configuration.rules
+        if (denied(input, rules))
+          return {
+            effect: "deny" as const,
+            message: undefined,
+            rules,
+            agent: configuration.agent,
+            session: configuration.session,
+          }
+        const layers: ReadonlyArray<Layer> = [
+          { source: "agent", rules },
+          { source: "session", rules: yield* sessionRules(configuration.session) },
+          { source: "saved", rules: yield* savedRules() },
+        ]
+        const all = layers.flatMap((layer) => layer.rules)
+        const matched = input.resources.map((resource) => {
+          const decided = winner(input.action, resource, layers)
+          return { resource, rule: decided?.rule, source: decided?.source }
+        })
+        const asking = matched.find((item) => (item.rule?.effect ?? "ask") === "ask")
+        const effect: Permission.Effect = asking ? "ask" : "allow"
+        const event = yield* hooks.trigger("permission", "evaluate", {
+          sessionID: input.sessionID,
+          agent: input.agent,
+          action: input.action,
+          resources: input.resources,
+          metadata: input.metadata,
+          source: input.source,
+          effect,
+        })
+        // A `*` / `*` ask is the configured fallback: it matches everything and decides nothing, so it
+        // reads as the default. A request a plugin turned into an ask was allowed by the rules.
+        const cause: PermissionLog.Cause =
+          effect === "ask" ? (asking?.rule && !blanketAsk(asking.rule) ? "rule" : "default") : "plugin"
+        // An allowed request a user grant covered is its own evidence: which rule settled it and which
+        // resource needed it. Agent rules are not grants and are never recorded.
+        const covered =
+          effect === "allow"
+            ? matched.find((item) => item.source === "session" || item.source === "saved")
+            : undefined
+        const grant: PermissionLog.Grant | undefined =
+          covered?.rule && (covered.source === "session" || covered.source === "saved")
+            ? { by: covered.source, rule: covered.rule }
+            : undefined
+        const notice = {
+          cause,
+          rule: cause === "rule" ? asking?.rule : undefined,
+          asker: asking?.resource ?? covered?.resource ?? input.resources[0],
+          agent: configuration.agent,
+          session: configuration.session,
+        }
+        const unattended = yield* Unattended
+        if (event.effect !== "ask" || unattended === undefined)
+          return { effect: event.effect, message: event.message, rules: all, grant, ...notice }
+        const settled = [...all, ...unattended]
+        const allowed = input.resources.every(
+          (resource) => evaluate(input.action, resource, settled).effect === "allow",
+        )
+        if (allowed) return { effect: "allow" as const, message: event.message, rules: all, ...notice }
+        return {
+          effect: "deny" as const,
+          message: `Permission ${input.action} needs approval, and nobody is present to give it`,
+          rules: all,
+          ...notice,
+        }
       })
-      // A `*` / `*` ask is the configured fallback: it matches everything and decides nothing, so it
-      // reads as the default. A request a plugin turned into an ask was allowed by the rules.
-      const cause: PermissionLog.Cause =
-        effect === "ask" ? (asking?.rule && !blanketAsk(asking.rule) ? "rule" : "default") : "plugin"
-      // Evidence for the ask log. Only an ask is ever recorded, so carrying it through the unattended
-      // paths below costs nothing and keeps a single return shape.
-      const notice = {
-        cause,
-        rule: cause === "rule" ? asking?.rule : undefined,
-        asker: asking?.resource ?? input.resources[0],
-        agent: configuration.agent,
-      }
-      const unattended = yield* Unattended
-      if (event.effect !== "ask" || unattended === undefined)
-        return { effect: event.effect, message: event.message, rules: all, ...notice }
-      const settled = [...all, ...unattended]
-      const allowed = input.resources.every((resource) => evaluate(input.action, resource, settled).effect === "allow")
-      if (allowed) return { effect: "allow" as const, message: event.message, rules: all, ...notice }
-      return {
-        effect: "deny" as const,
-        message: `Permission ${input.action} needs approval, and nobody is present to give it`,
-        rules: all,
-        ...notice,
-      }
-    })
 
     // Repeats are counted per session and per exact ask, so the second identical request can offer an
     // exact session scope while the first stays a one-time decision. Bounded so a long session cannot
@@ -292,11 +359,26 @@ const layer = Layer.effect(
       }
     }
 
-    const create = (
-      request: Request,
-      agent: Agent.ID | undefined,
-      notice: { readonly cause: PermissionLog.Cause; readonly rule?: PermissionLog.Rule; readonly asker?: string },
-    ) =>
+    // A request a user grant settled is its own evidence, so record it with the rule and the resource
+    // that used it. An ask has its own record path, and an agent-rule allow leaves nothing to prove.
+    const logUse = (id: ID, input: AssertInput, verdict: Verdict) =>
+      verdict.grant === undefined || verdict.effect !== "allow"
+        ? Effect.void
+        : Effect.tryPromise(() =>
+            PermissionLog.record({
+              id,
+              session: input.sessionID,
+              parent: verdict.session.parentID,
+              kind: verdict.session.parentID === undefined ? undefined : "subagent",
+              agent: verdict.agent ?? "unknown",
+              action: input.action,
+              resources: input.resources,
+              asker: verdict.asker,
+              grant: verdict.grant,
+            }),
+          ).pipe(Effect.orElseSucceed(() => undefined))
+
+    const create = (request: Request, agent: Agent.ID | undefined, notice: Verdict) =>
       Effect.uninterruptible(
         Effect.gen(function* () {
           const deferred = yield* Deferred.make<void, DeclinedError | CorrectedError>()
@@ -316,6 +398,8 @@ const layer = Layer.effect(
             PermissionLog.record({
               id: request.id,
               session: request.sessionID,
+              parent: notice.session.parentID,
+              kind: notice.session.parentID === undefined ? undefined : "subagent",
               agent: agent ?? "unknown",
               action: request.action,
               resources: request.resources,
@@ -334,6 +418,7 @@ const layer = Layer.effect(
       const result = yield* evaluateInput(input)
       const value = request(input, result.message)
       if (result.effect === "ask") yield* create(value, result.agent ?? input.agent, result)
+      else yield* logUse(value.id, input, result)
       return { id: value.id, effect: result.effect }
     })
 
@@ -351,7 +436,10 @@ const layer = Layer.effect(
                 reason: result.message,
               })
             }
-            if (result.effect === "allow") return
+            if (result.effect === "allow") {
+              yield* logUse(input.id ?? ID.create(), input, result)
+              return
+            }
             const item = yield* create(request(input, result.message), result.agent ?? input.agent, result)
             return yield* restore(Deferred.await(item.deferred)).pipe(
               // Deliberate defect tunnel: leaves wrap execution in blanket `mapError`, which
