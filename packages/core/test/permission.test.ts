@@ -537,6 +537,60 @@ describe("Permission", () => {
     }),
   )
 
+  it.effect("shares a session approval across the agent tree", () =>
+    Effect.gen(function* () {
+      yield* setup()
+      yield* childSession("ses_child_a", "ses_test")
+      yield* childSession("ses_child_b", "ses_test")
+      const service = yield* Permission.Service
+      const first = yield* waitForRequest({
+        id: Permission.ID.create("per_tree_a"),
+        sessionID: Session.ID.make("ses_child_a"),
+        action: "shell",
+        resources: ["git status --porcelain"],
+        save: ["git status *"],
+      })
+      const second = yield* waitForRequest({
+        id: Permission.ID.create("per_tree_b"),
+        sessionID: Session.ID.make("ses_child_b"),
+        action: "shell",
+        resources: ["git status --porcelain"],
+        save: ["git status *"],
+      })
+
+      // The approval is made in one child; the sibling's pending ask settles and the parent inherits it.
+      yield* service.reply({ requestID: first.request.id, reply: "session" })
+      yield* Fiber.join(first.fiber)
+      expect(yield* service.get(second.request.id)).toBeUndefined()
+
+      for (const sessionID of ["ses_test", "ses_child_b"]) {
+        expect(
+          yield* service.ask(
+            assertion({
+              id: Permission.ID.create(`per_tree_${sessionID}`),
+              sessionID: Session.ID.make(sessionID),
+              action: "shell",
+              resources: ["git status -s"],
+            }),
+          ),
+        ).toMatchObject({ effect: "allow" })
+      }
+
+      // A session outside the tree still asks.
+      yield* setup([], Session.ID.make("ses_other_tree"))
+      const other = yield* service.ask(
+        assertion({
+          id: Permission.ID.create("per_tree_other"),
+          sessionID: Session.ID.make("ses_other_tree"),
+          action: "shell",
+          resources: ["git status -s"],
+        }),
+      )
+      expect(other).toMatchObject({ effect: "ask" })
+      yield* service.reply({ requestID: other.id, reply: "reject" })
+    }),
+  )
+
   it.effect("records the spawning session on a subagent ask", () =>
     Effect.gen(function* () {
       yield* setup()

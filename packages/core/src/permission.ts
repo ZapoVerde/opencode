@@ -150,8 +150,8 @@ const layer = Layer.effect(
     const saved = yield* PermissionSaved.Service
     const hooks = yield* PluginHooks.Service
     const pending = new Map<ID, Pending>()
-    // A session approval is deliberately process-local: it lasts for the current agent's session and
-    // the subagents that session spawns, not the project, and a restart or an agent switch forgets it.
+    // A session approval is deliberately process-local: it is stored at the root of the agent tree and
+    // covers that tree, not the project, and a restart or an agent switch on the root forgets it.
     // Grants are checked after the agent and session rules, so they can widen an ask but can never
     // override an agent deny.
     const grants = new Map<SessionSchema.ID, Permission.Ruleset>()
@@ -220,6 +220,18 @@ const layer = Layer.effect(
         current = parent
       }
       return chain.reverse().flatMap((item) => grants.get(item.id) ?? [])
+    })
+
+    // Store a session approval at the root of the agent tree so one decision covers the parent and
+    // every sibling that asks the same question. The ancestry walk above makes it visible downward.
+    const sessionRoot = Effect.fnUntraced(function* (sessionID: SessionSchema.ID) {
+      let current = yield* sessions.get(sessionID)
+      while (current?.parentID) {
+        const parent = yield* sessions.get(current.parentID)
+        if (!parent) break
+        current = parent
+      }
+      return current?.id ?? sessionID
     })
 
     function denied(input: Pick<Request, "action" | "resources">, rules: Permission.Ruleset) {
@@ -348,7 +360,11 @@ const layer = Layer.effect(
         action: input.action,
         resources: input.resources,
         save: input.save,
-        scope: scope(input, { repeat: repeatAsk(input) }),
+        scope: scope(input, {
+          repeat: repeatAsk(input),
+          directory: location.directory,
+          root: location.project.directory,
+        }),
         // Tools copy optional inputs straight into metadata; undefined values are not JSON and would
         // fail the HttpApi response encoder when clients list pending requests.
         metadata:
@@ -522,11 +538,12 @@ const layer = Layer.effect(
           // A session approval grants the engine-selected scope, never a pattern supplied by the
           // client or invented by the reviewer. A request with no safe scope is a one-time decision.
           const sessionResources = input.reply === "session" ? (existing.request.scope?.resources ?? []) : []
-          if (sessionResources.length) {
+          const grantRoot = sessionResources.length ? yield* sessionRoot(existing.request.sessionID) : undefined
+          if (sessionResources.length && grantRoot !== undefined) {
             grants.set(
-              existing.request.sessionID,
+              grantRoot,
               merge(
-                grants.get(existing.request.sessionID) ?? [],
+                grants.get(grantRoot) ?? [],
                 sessionResources.map((resource) => ({
                   action: existing.request.action,
                   resource,
@@ -543,9 +560,9 @@ const layer = Layer.effect(
           if (input.reply === "session" && !sessionResources.length) return
 
           for (const [id, item] of pending) {
-            // A session grant only applies to the session that approved it. Project-wide saved rules
-            // can settle pending asks everywhere.
-            if (input.reply === "session" && item.request.sessionID !== existing.request.sessionID) continue
+            // A session grant settles pending asks across the tree that approved it. Project-wide
+            // saved rules can settle pending asks everywhere.
+            if (grantRoot !== undefined && (yield* sessionRoot(item.request.sessionID)) !== grantRoot) continue
             const result = yield* evaluateInput({ ...item.request, agent: item.agent }).pipe(
               Effect.catchTag("Session.NotFoundError", () => Effect.undefined),
             )
