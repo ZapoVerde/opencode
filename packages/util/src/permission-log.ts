@@ -14,21 +14,34 @@ const resourceLimit = 200
 /** Why the engine asked instead of allowing the request. */
 export type Cause = "default" | "rule" | "plugin"
 
+/** How a request was allowed without asking. */
+export type GrantSource = "session" | "saved"
+
 export type Rule = {
   readonly action: string
   readonly resource: string
   readonly effect: string
 }
 
+export type Grant = {
+  /** `session` covers the approving session and the subagents it spawns; `saved` covers the project. */
+  readonly by: GrantSource
+  readonly rule: Rule
+}
+
 export type Request = {
   readonly id: string
   readonly at: number
   readonly session: string
+  /** The session that spawned this one, when it is a subagent. */
+  readonly parent?: string
+  readonly kind?: "subagent"
   readonly agent: string
   readonly action: string
   readonly resources: readonly string[]
   readonly scope?: { readonly id: string; readonly label: string }
-  readonly cause: Cause
+  /** Why the engine asked. Absent when a grant allowed the request without asking. */
+  readonly cause?: Cause
   /** The rule that asked, or the rule the plugin replaced. Absent when no rule matched. */
   readonly rule?: Rule
   /** The resource that forced the ask. A batched command asks for all of its statements, but one of them decided. */
@@ -37,6 +50,8 @@ export type Request = {
   readonly shape: string
   /** How many times the same shape already asked in this session, before this request. */
   readonly repeat: number
+  /** The grant that allowed the request without asking. Absent for asks. */
+  readonly grant?: Grant
 }
 
 export type Reply = {
@@ -49,7 +64,7 @@ export type Reply = {
 export type Entry = Request & { readonly reply?: Reply }
 
 type Line =
-  | { readonly type: "ask"; readonly request: Request }
+  | { readonly type: "request"; readonly request: Request }
   | { readonly type: "reply"; readonly id: string; readonly reply: Reply }
 
 type State = {
@@ -70,9 +85,9 @@ export function file(directory = Global.Path.data) {
 }
 
 /**
- * Record an ask. Resources are redacted and truncated before they reach the file, so a command that
- * carries a token does not leave one behind. Logging never decides the permission: callers ignore a
- * failure here.
+ * Record a permission decision: an ask, or a request a grant allowed without asking. Resources are
+ * redacted and truncated before they reach the file, so a command that carries a token does not leave
+ * one behind. Logging never decides the permission: callers ignore a failure here.
  */
 export async function record(input: Omit<Request, "at" | "shape" | "repeat">, options: Options = {}) {
   const directory = options.directory ?? Global.Path.data
@@ -91,11 +106,13 @@ export async function record(input: Omit<Request, "at" | "shape" | "repeat">, op
     repeat: state.repeats.get(key) ?? 0,
   }
   state.requests.push(request)
-  state.repeats.set(key, request.repeat + 1)
+  // A grant use is not an ask, so it must not advance the count that decides when a repeat
+  // can offer its exact command as a session scope.
+  if (!request.grant) state.repeats.set(key, request.repeat + 1)
   state.appends += 1
   await enqueue(directory, async () => {
     await mkdir(directory, { recursive: true })
-    await appendFile(file(directory), JSON.stringify({ type: "ask", request } satisfies Line) + "\n")
+    await appendFile(file(directory), JSON.stringify({ type: "request", request } satisfies Line) + "\n")
   })
   if (state.requests.length > Limit || state.appends >= Limit) await compact(directory, state)
 }
@@ -130,9 +147,11 @@ export async function read(options: { readonly directory?: string } = {}): Promi
 export type Summary = {
   readonly agent: string
   readonly action: string
-  readonly cause: Cause
+  /** `grant` groups requests allowed by a user grant instead of an ask. */
+  readonly cause: Cause | "grant"
   readonly shape: string
   readonly asks: number
+  readonly allowed: number
   readonly once: number
   readonly session: number
   readonly always: number
@@ -146,13 +165,15 @@ export type Summary = {
 export function summarize(entries: ReadonlyArray<Entry>): Summary[] {
   const groups = new Map<string, Summary & { total: number }>()
   for (const entry of entries) {
-    const key = [entry.agent, entry.action, entry.cause, entry.shape].join("\n")
+    const cause = entry.grant ? "grant" : (entry.cause ?? "default")
+    const key = [entry.agent, entry.action, cause, entry.shape].join("\n")
     const row = groups.get(key) ?? {
       agent: entry.agent,
       action: entry.action,
-      cause: entry.cause,
+      cause,
       shape: entry.shape,
       asks: 0,
+      allowed: 0,
       once: 0,
       session: 0,
       always: 0,
@@ -162,14 +183,16 @@ export function summarize(entries: ReadonlyArray<Entry>): Summary[] {
       total: 0,
     }
     const asked = entry.reply?.reply
+    const granted = entry.grant !== undefined
     groups.set(key, {
       ...row,
-      asks: row.asks + 1,
+      asks: row.asks + (granted ? 0 : 1),
+      allowed: row.allowed + (granted ? 1 : 0),
       once: row.once + (asked === "once" ? 1 : 0),
       session: row.session + (asked === "session" ? 1 : 0),
       always: row.always + (asked === "always" ? 1 : 0),
       reject: row.reject + (asked === "reject" ? 1 : 0),
-      unanswered: row.unanswered + (entry.reply ? 0 : 1),
+      unanswered: row.unanswered + (!granted && !entry.reply ? 1 : 0),
       latency: row.latency + (entry.reply?.latency ?? 0),
       total: row.total + (entry.reply ? 1 : 0),
     })
@@ -193,8 +216,9 @@ async function load(directory: string, state: State) {
   for (const line of text.split("\n")) {
     const parsed = parse(line)
     if (!parsed) continue
-    if (parsed.type === "ask") {
+    if (parsed.type === "request") {
       state.requests.push(parsed.request)
+      if (parsed.request.grant) continue
       const key = repeatKey(parsed.request.session, parsed.request.action, parsed.request.shape)
       state.repeats.set(key, (state.repeats.get(key) ?? 0) + 1)
     } else state.replies.set(parsed.id, parsed.reply)
@@ -206,11 +230,13 @@ async function load(directory: string, state: State) {
 }
 
 // A crash during a write can leave a partial last line. Anything that does not parse is not a record.
+// Older logs used `ask` as the line type; read it as a request so upgrading does not drop history.
 function parse(line: string): Line | undefined {
   if (!line.trim()) return undefined
   try {
-    const value = JSON.parse(line) as Line
-    if (value?.type === "ask" && typeof value.request?.id === "string") return value
+    const value = JSON.parse(line) as Line | { readonly type: "ask"; readonly request?: Request }
+    if ((value?.type === "request" || value?.type === "ask") && typeof value.request?.id === "string")
+      return { type: "request", request: value.request }
     if (value?.type === "reply" && typeof value.id === "string" && typeof value.reply?.at === "number") return value
     return undefined
   } catch {
@@ -232,7 +258,7 @@ async function compact(directory: string, state: State) {
   for (const id of state.replies.keys()) if (!kept.has(id)) state.replies.delete(id)
   rebuild(state)
   const lines: Line[] = [
-    ...state.requests.map((request): Line => ({ type: "ask", request })),
+    ...state.requests.map((request): Line => ({ type: "request", request })),
     ...Array.from(state.replies, ([id, reply]): Line => ({ type: "reply", id, reply })),
   ]
   await enqueue(directory, async () => {
@@ -245,6 +271,7 @@ async function compact(directory: string, state: State) {
 function rebuild(state: State) {
   state.repeats.clear()
   for (const request of state.requests) {
+    if (request.grant) continue
     const key = repeatKey(request.session, request.action, request.shape)
     state.repeats.set(key, (state.repeats.get(key) ?? 0) + 1)
   }

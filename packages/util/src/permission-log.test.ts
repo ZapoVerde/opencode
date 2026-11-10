@@ -142,6 +142,7 @@ describe("permission log", () => {
         cause: "default",
         shape: "cd",
         asks: 3,
+        allowed: 0,
         once: 2,
         session: 0,
         always: 0,
@@ -155,6 +156,7 @@ describe("permission log", () => {
         cause: "rule",
         shape: "docker compose up",
         asks: 1,
+        allowed: 0,
         once: 0,
         session: 0,
         always: 0,
@@ -162,6 +164,48 @@ describe("permission log", () => {
         unanswered: 0,
         latency: 100,
       },
+    ])
+  })
+
+  test("groups grant uses apart from asks and keeps them out of the repeat count", async () => {
+    const dir = await directory()
+    const grant = { by: "session" as const, rule: { action: "shell", resource: "git status *", effect: "allow" } }
+    await PermissionLog.record(
+      {
+        id: "per_ask",
+        session: "ses_a",
+        parent: "ses_parent",
+        kind: "subagent",
+        agent: "explore",
+        action: "shell",
+        resources: ["git status -s"],
+        cause: "default",
+      },
+      { directory: dir, at: 1 },
+    )
+    await PermissionLog.record(
+      {
+        id: "per_use",
+        session: "ses_a",
+        parent: "ses_parent",
+        kind: "subagent",
+        agent: "explore",
+        action: "shell",
+        resources: ["git status -s"],
+        asker: "git status -s",
+        grant,
+      },
+      { directory: dir, at: 2 },
+    )
+
+    const entries = await PermissionLog.read({ directory: dir })
+    expect(entries.map((entry) => [entry.id, entry.parent, entry.kind, entry.repeat, entry.grant])).toEqual([
+      ["per_ask", "ses_parent", "subagent", 0, undefined],
+      ["per_use", "ses_parent", "subagent", 1, grant],
+    ])
+    expect(PermissionLog.summarize(entries)).toMatchObject([
+      { cause: "default", asks: 1, allowed: 0, unanswered: 1 },
+      { cause: "grant", asks: 0, allowed: 1, unanswered: 0 },
     ])
   })
 })

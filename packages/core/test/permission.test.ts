@@ -71,6 +71,27 @@ function setRules(rules: Permission.Ruleset) {
   })
 }
 
+function childSession(sessionID: string, parentID: string) {
+  return Effect.gen(function* () {
+    const { db } = yield* Database.Service
+    yield* db
+      .insert(SessionTable)
+      .values({
+        id: Session.ID.make(sessionID),
+        parent_id: Session.ID.make(parentID),
+        project_id: Project.ID.global,
+        slug: "child",
+        directory: "/project",
+        title: "child",
+        version: "test",
+        agent: Agent.ID.make("test"),
+      })
+      .onConflictDoNothing()
+      .run()
+      .pipe(Effect.orDie)
+  })
+}
+
 function assertion(input: Partial<Permission.AssertInput> = {}) {
   return {
     id: Permission.ID.create("per_test"),
@@ -455,6 +476,87 @@ describe("Permission", () => {
       // Session approvals are not project saved rules.
       const { db } = yield* Database.Service
       expect(yield* db.select().from(PermissionTable).all()).toEqual([])
+    }),
+  )
+
+  it.effect("extends a session approval to the subagents that session spawns", () =>
+    Effect.gen(function* () {
+      yield* setup()
+      yield* childSession("ses_child", "ses_test")
+      const service = yield* Permission.Service
+      const selected = yield* waitForRequest({
+        action: "shell",
+        resources: ["git status --porcelain"],
+        save: ["git status *"],
+      })
+      yield* service.reply({ requestID: selected.request.id, reply: "session" })
+      yield* Fiber.join(selected.fiber)
+
+      expect(
+        yield* service.ask(
+          assertion({
+            id: Permission.ID.create("per_child_grant"),
+            sessionID: Session.ID.make("ses_child"),
+            action: "shell",
+            resources: ["git status -s"],
+          }),
+        ),
+      ).toMatchObject({ effect: "allow" })
+
+      const entries = yield* Effect.promise(() => PermissionLog.read())
+      expect(entries.find((entry) => entry.id === "per_child_grant")).toMatchObject({
+        session: "ses_child",
+        parent: "ses_test",
+        kind: "subagent",
+        grant: { by: "session", rule: { action: "shell", resource: "git status *", effect: "allow" } },
+      })
+    }),
+  )
+
+  it.effect("records the spawning session on a subagent ask", () =>
+    Effect.gen(function* () {
+      yield* setup()
+      yield* childSession("ses_child", "ses_test")
+      const service = yield* Permission.Service
+      const asked = yield* service.ask(
+        assertion({
+          id: Permission.ID.create("per_subagent_ask"),
+          sessionID: Session.ID.make("ses_child"),
+          action: "shell",
+          resources: ["echo hello"],
+        }),
+      )
+      expect(asked).toMatchObject({ effect: "ask" })
+      yield* service.reply({ requestID: asked.id, reply: "reject" })
+
+      const entries = yield* Effect.promise(() => PermissionLog.read())
+      expect(entries.find((entry) => entry.id === "per_subagent_ask")).toMatchObject({
+        session: "ses_child",
+        parent: "ses_test",
+        kind: "subagent",
+      })
+    }),
+  )
+
+  it.effect("records a request a saved rule allowed without asking", () =>
+    Effect.gen(function* () {
+      yield* setup()
+      const saved = yield* PermissionSaved.Service
+      yield* saved.add({ projectID: Project.ID.global, action: "read", resources: ["src/*"] })
+      const service = yield* Permission.Service
+      yield* service.assert(
+        assertion({ id: Permission.ID.create("per_saved_use"), resources: ["src/index.ts"] }),
+      )
+
+      const entries = yield* Effect.promise(() => PermissionLog.read())
+      const entry = entries.find((item) => item.id === "per_saved_use")
+      expect(entry).toMatchObject({
+        session: "ses_test",
+        action: "read",
+        resources: ["src/index.ts"],
+        grant: { by: "saved", rule: { action: "read", resource: "src/*", effect: "allow" } },
+      })
+      expect(entry?.reply).toBeUndefined()
     }),
   )
 

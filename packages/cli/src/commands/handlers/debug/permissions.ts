@@ -22,11 +22,11 @@ export default Runtime.handler(
     const rows = PermissionLog.summarize(entries)
       .filter((row) => !agent || row.agent === agent)
       .slice(0, input.limit)
-    const widths = [8, 8, 8, 22, 5, 5, 5, 7, 7, 5, 6]
+    const widths = [8, 8, 8, 22, 5, 5, 5, 5, 7, 7, 5, 6]
     const line = (cells: ReadonlyArray<string | number>) =>
       cells.map((cell, index) => String(cell).padEnd(widths[index] ?? 0)).join(" ") + EOL
     process.stdout.write(
-      line(["agent", "action", "cause", "shape", "asks", "once", "sess", "always", "reject", "open", "ms"]) +
+      line(["agent", "action", "cause", "shape", "asks", "auto", "once", "sess", "always", "reject", "open", "ms"]) +
         rows
           .map((row) =>
             line([
@@ -35,6 +35,7 @@ export default Runtime.handler(
               row.cause,
               row.shape,
               row.asks,
+              row.allowed,
               row.once,
               row.session,
               row.always,
@@ -45,10 +46,11 @@ export default Runtime.handler(
           )
           .join(""),
     )
-    const defaults = entries.filter((entry) => entry.cause === "default").length
-    const unanswered = entries.filter((entry) => !entry.reply).length
+    const defaults = entries.filter((entry) => !entry.grant && entry.cause === "default").length
+    const allowed = entries.filter((entry) => entry.grant).length
+    const unanswered = entries.filter((entry) => !entry.grant && !entry.reply).length
     process.stdout.write(
-      `${EOL}${entries.length} requests, ${defaults} with no matching rule, ${unanswered} still open${EOL}`,
+      `${EOL}${entries.length} requests, ${defaults} with no matching rule, ${allowed} auto-allowed, ${unanswered} still open${EOL}`,
     )
   }),
 )
