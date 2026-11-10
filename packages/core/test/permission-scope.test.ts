@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
 import { Permission } from "@opencode/core/permission"
 
 const shell = (resources: string[]) => ({ action: "shell", resources })
@@ -50,5 +53,61 @@ describe("permission session scope", () => {
       label: "this tool",
       resources: ["github:*"],
     })
+  })
+
+  test("scopes an edit at the nearest project directory, never the worktree root", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "opencode-permission-scope-"))
+    try {
+      mkdirSync(path.join(root, "orchestrator", "src", "io"), { recursive: true })
+      writeFileSync(path.join(root, "package.json"), "{}")
+      writeFileSync(path.join(root, "orchestrator", "package.json"), "{}")
+      mkdirSync(path.join(root, "plugins", "irc", "src"), { recursive: true })
+      writeFileSync(path.join(root, "plugins", "irc", "package.json"), "{}")
+      mkdirSync(path.join(root, "docs"), { recursive: true })
+      writeFileSync(path.join(root, "README.md"), "")
+
+      const edit = (resources: string[], directory = root) =>
+        Permission.scope({ action: "edit", resources }, { directory, root })
+
+      expect(edit(["orchestrator/src/io/types.ts"])).toEqual({
+        id: "project",
+        label: "edits in orchestrator",
+        resources: ["orchestrator/*"],
+      })
+      expect(edit(["plugins/irc/src/client.ts"])).toEqual({
+        id: "project",
+        label: "edits in plugins/irc",
+        resources: ["plugins/irc/*"],
+      })
+      // A directory without a project marker is still a directory grant, not a file grant.
+      expect(edit(["docs/guide.md"])).toEqual({
+        id: "project",
+        label: "edits in docs",
+        resources: ["docs/*"],
+      })
+      // A file at the worktree root has no narrower project boundary.
+      expect(edit(["README.md"])).toBeUndefined()
+      expect(edit(["/etc/passwd"])).toBeUndefined()
+      expect(edit(["orchestrator/src/io/types.ts", "orchestrator/src/io/model.ts"])).toEqual({
+        id: "project",
+        label: "edits in orchestrator",
+        resources: ["orchestrator/*"],
+      })
+      expect(edit(["orchestrator/src/io/types.ts", "plugins/irc/src/client.ts"])).toEqual({
+        id: "project",
+        label: "edits in these projects",
+        resources: ["orchestrator/*", "plugins/irc/*"],
+      })
+      // A session already rooted at the project grants its own tree as "*", not the worktree.
+      expect(edit(["src/io/types.ts"], path.join(root, "orchestrator"))).toEqual({
+        id: "project",
+        label: "edits in orchestrator",
+        resources: ["*"],
+      })
+      // Without a session directory there is no filesystem boundary to grant.
+      expect(Permission.scope({ action: "edit", resources: ["orchestrator/src/io/types.ts"] })).toBeUndefined()
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
   })
 })
