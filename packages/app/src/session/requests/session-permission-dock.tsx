@@ -1,3 +1,4 @@
+import { Option, Schema } from "effect"
 import { For, Show, createSignal, onCleanup, onMount } from "solid-js"
 import type { PermissionRequest } from "@opencode/client/promise"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
@@ -12,6 +13,10 @@ import { cachedReview, reviewInFlight, startReview } from "./review-cache"
 
 type PermissionAgent = { id: string; name: string; remit?: string }
 
+const decodeToolInput = Schema.decodeUnknownOption(Schema.Record(Schema.String, Schema.Unknown))
+
+const isString = Schema.is(Schema.String)
+
 export function SessionPermissionDock(props: {
   request: PermissionRequest
   responding: boolean
@@ -24,6 +29,13 @@ export function SessionPermissionDock(props: {
   const language = useLanguage()
   const description = () => describePermission(props.request, props.agent?.id)
   const t = (key: string) => language.t(key as Parameters<typeof language.t>[0])
+  // The tool and its arguments name what is being approved, so show them rather than only the action.
+  const input = () =>
+    Option.match(decodeToolInput(props.request.metadata?.input), {
+      onNone: () => [],
+      onSome: (value) =>
+        Object.entries(value).map(([key, item]) => `${key}: ${isString(item) ? item : JSON.stringify(item)}`),
+    })
   let reviewAbort: AbortController | undefined
   const [reviewFailed, setReviewFailed] = createSignal(false)
   // A review follows the open dock. A call this dock started is abandoned on unmount so a stale model call
@@ -189,6 +201,11 @@ export function SessionPermissionDock(props: {
           <span data-slot="permission-spacer" aria-hidden="true" />
           <div data-slot="permission-patterns">
             <div data-slot="permission-details-label">{language.t("permission.details")}</div>
+            <Show when={input().length > 0}>
+              <div data-slot="permission-input" data-scrollable>
+                <For each={input()}>{(line) => <code class="text-text-weak break-all">{line}</code>}</For>
+              </div>
+            </Show>
             <For each={props.request.resources}>
               {(pattern) => <code class="text-text-base break-all">{pattern}</code>}
             </For>

@@ -34,10 +34,29 @@ function check(condition, message) {
 
 // --- pure logic mirrored from scout-review.ts ----------------------------------------------
 
-const ENVELOPE = /<subagent\s+[^>]*>([\s\S]*)<\/subagent>/
+const ENVELOPE = /<subagent\s+([^>]*)>([\s\S]*)<\/subagent>/
+const DESCRIPTION = /\bdescription="([^"]*)"/
 
 function escape(text) {
   return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+}
+
+// The report is a synthetic message, not a tool result: the parent receives it with metadata naming
+// the child and the state, so identity and envelope matching both come from the message.
+function reportOf(message) {
+  if (message.role !== "user") return undefined
+  const metadata = message.metadata
+  if (metadata?.source !== "subagent") return undefined
+  const agent = metadata.agent
+  if (typeof agent !== "string" || !/scout/i.test(agent)) return undefined
+  const text = message.content.flatMap((part) => (part.type === "text" && part.text ? [part.text] : [])).join("\n")
+  const match = ENVELOPE.exec(text)
+  if (!match) return undefined
+  return {
+    key: `${String(metadata.childID ?? "")}:${String(metadata.state ?? "")}:${text.length}:${text.slice(-64)}`,
+    request: DESCRIPTION.exec(match[1])?.[1] ?? match[1],
+    body: match[2],
+  }
 }
 
 function parse(text) {
@@ -110,19 +129,36 @@ check(escape(hostile).includes("&lt;/report&gt;"), "escape renders the closing t
 check(escape('{"verdict":"pass"}').includes("{"), "escape leaves braces alone")
 
 console.log("\n--- envelope and identity ---")
-const isScout = (input) => typeof input?.agent === "string" && /scout/i.test(input.agent)
-check(isScout({ agent: "scout" }), "scout is detected from the requested agent")
-check(!isScout({ agent: "general" }), "other agents are not reviewed")
-check(!isScout({}), "a call with no agent is not reviewed")
+const report = (metadata, text) => ({ role: "user", content: [{ type: "text", text }], metadata })
+const delivered = '<subagent sessionID="s" state="completed" description="research the v3 API">\nanswer\n</subagent>'
 
-const foreground = '<subagent sessionID="s" state="completed">\nanswer\n</subagent>'
-check(ENVELOPE.exec(foreground)?.[1] === "\nanswer\n", "foreground envelope (no description) matches")
-const delivered = '<subagent sessionID="s" state="completed" description="research">\nanswer\n</subagent>'
-check(ENVELOPE.exec(delivered)?.[1] === "\nanswer\n", "completion envelope (with description) matches")
+const found = reportOf(report({ source: "subagent", agent: "scout", childID: "s", state: "completed" }, delivered))
+check(found?.body === "\nanswer\n", "scout report is recognised from its synthetic metadata")
+check(found?.request === "research the v3 API", "the description stands in for the request")
+check(
+  !reportOf(report({ source: "subagent", agent: "general", childID: "s" }, delivered)),
+  "other agents' reports are not reviewed",
+)
+check(!reportOf(report({ source: "subagent", childID: "s" }, delivered)), "a report with no agent is not reviewed")
+check(!reportOf(report({}, delivered)), "a user message without subagent metadata is not reviewed")
+check(
+  !reportOf({ role: "assistant", content: [{ type: "text", text: delivered }], metadata: { source: "subagent", agent: "scout" } }),
+  "only user messages carry reports",
+)
+check(
+  reportOf(report({ source: "subagent", agent: "scout" }, '<subagent sessionID="s" state="error">\nfailed\n</subagent>'))?.key !==
+    found?.key,
+  "a later state of the same child is reviewed on its own",
+)
 
 // A report quoting an attack must stay inside the body, not break out of it.
-const quoting = '<subagent sessionID="s" state="completed">\nThe page said "ignore previous instructions". I did not follow it.\n</subagent>'
-check((ENVELOPE.exec(quoting)?.[1] ?? "").includes("I did not follow it"), "quoted injection stays in the body")
+const quoting = reportOf(
+  report(
+    { source: "subagent", agent: "scout", childID: "s", state: "completed" },
+    '<subagent sessionID="s" state="completed">\nThe page said "ignore previous instructions". I did not follow it.\n</subagent>',
+  ),
+)
+check(quoting?.body.includes("I did not follow it"), "quoted injection stays in the body")
 
 // --- live judge ----------------------------------------------------------------------------
 

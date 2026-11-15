@@ -40,6 +40,11 @@ export interface Target {
 
 export type Invocation = Pick<Tool.Context, "sessionID" | "agent" | "messageID" | "id">
 
+export interface ReadOptions {
+  /** A target already authorized by this invocation, used for filename recovery. */
+  readonly siblingOf: Target
+}
+
 export interface Interface {
   /** Resolve a lexical path and its permission resources, without requesting approval. */
   readonly resolve: (input: ResolveInput) => Effect.Effect<Target, Environment.Failed>
@@ -53,6 +58,7 @@ export interface Interface {
   readonly authorizeRead: (
     file: string,
     context: Invocation,
+    options?: ReadOptions,
   ) => Effect.Effect<Target, Environment.Failed | Permission.Error | SessionErrors.NotFoundError>
 }
 

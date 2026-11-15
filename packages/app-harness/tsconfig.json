@@ -3,6 +3,8 @@
   "extends": "@tsconfig/node22/tsconfig.json",
   "compilerOptions": {
     "noUnusedLocals": true,
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
     "target": "ESNext",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
@@ -12,6 +14,6 @@
     "noEmit": true,
     "lib": ["es2023", "dom", "dom.iterable"],
     "strict": true,
-    "types": ["bun", "node"]
+    "types": ["bun", "node", "vite/client"]
   }
 }
