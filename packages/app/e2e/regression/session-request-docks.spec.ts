@@ -486,12 +486,13 @@ test("sends one permission reply and closes the dock when it lands, before permi
   await expectSessionTitle(page, title)
 
   const permission = page.locator('[data-component="dock-prompt"][data-kind="permission"]')
-  const actions = permission.locator('[data-slot="permission-footer-actions"]')
+  // This checkout publishes the decisions in the dock header, and replaces the permanent "always" with the
+  // engine-scoped session action (absent here because this request carries no scope).
+  const actions = permission.locator('[data-slot="permission-actions"]')
   await permission.getByRole("button", { name: "Allow once" }).dblclick()
   await expect.poll(() => replies.length).toBe(1)
 
-  for (const name of ["Deny", "Allow always", "Allow once"])
-    await expect(actions.getByRole("button", { name, exact: true })).toBeDisabled()
+  for (const name of ["Deny", "Allow once"]) await expect(actions.getByRole("button", { name, exact: true })).toBeDisabled()
 
   released.resolve()
   await expect(permission).toHaveCount(0)

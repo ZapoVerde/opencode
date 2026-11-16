@@ -145,6 +145,10 @@ export function SessionPermissionDock(props: {
       <div data-slot="permission-row">
         <span data-slot="permission-spacer" aria-hidden="true" />
         <div data-slot="permission-summary">
+          {/* A tool the dock has no plain-English summary for (an MCP tool, for example) still has to name itself. */}
+          <Show when={description().summary === "permission.summary.default"}>
+            <code data-slot="permission-action">{props.request.action}</code>
+          </Show>
           <div data-slot="permission-hint">{t(description().summary)}</div>
           <Show when={description().consequence}>
             {(key) => <div data-slot="permission-consequence">{t(key())}</div>}
