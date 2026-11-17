@@ -54,22 +54,9 @@ export function createTipToasts() {
       .catch(() => undefined)
   })
 
+  // The "control your browser" tip is deliberately absent: it prompts for the Chrome extension even on phones,
+  // where the extension cannot be installed, and this fork does not use it.
   const tips: Tip[] = [
-    {
-      id: "browse",
-      title: "tips.browse.title",
-      description: "tips.browse.description",
-      when: () =>
-        !location()
-          ?.mcp.server.list()
-          ?.some((item) => item.name === "browse"),
-      action: {
-        label: "tips.browse.install",
-        run: () => platform.openExternal(
-            "https://chromewebstore.google.com/detail/mfnicocicmmlkpjnaffgihfjhdgjkdjg?utm_source=opencode-desktop&utm_campaign=tip-browse",
-          ),
-      },
-    },
     {
       id: "hex",
       title: "tips.hex.title",
