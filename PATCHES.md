@@ -423,6 +423,17 @@ Upstream still does not address any active patch as of `4423f42836`: there is no
 - **Verification:** `packages/app` typecheck passes; the production build succeeds with no fixture flags; `grep -rn 'createTipToasts' packages/app/src` finds only the unused export in `tips/model.ts`.
 - **When updating:** If upstream adds a supported tips-off setting, use it and retire this patch. If a merge re-adds the shell call, remove the call again rather than deleting the tip modules.
 
+#### Silent web-app updates
+
+- **Status:** Applied
+- **Patch branch:** integration-only (this commit)
+- **Upstream base:** `upstream/dev` / `5d55571d8d`
+- **Files:** `packages/app/vite.pwa.ts`, `packages/gui-plugins/src/updater/web.tsx`
+- **Problem:** The web app prompts "Update ready — Reload" for every deploy. The generated service worker used `skipWaiting: false` / `clientsClaim: false`, so a new build waited for every client to close, and the prompt's Reload could re-enter the same state after rapid rebuilds: the waiting worker never activated, so the toast returned each time.
+- **Fix:** Generate the worker with `skipWaiting: true` and `clientsClaim: true`, so a new build activates and claims open windows; the updater's existing `controllerchange` handler then reloads onto it. Remove the "Update ready" toast and titlebar pill from the web updater; Settings › Updates keeps the manual check and "Reload from server" reset.
+- **Verification:** `packages/app` and `packages/gui-plugins` typecheck; the production build succeeds; `dist/sw.js` contains `self.skipWaiting()` and `clients.claim()`; the app bundle no longer registers the titlebar update item.
+- **When updating:** If upstream adds a supported silent-update mode or a setting for these prompts, use it and retire this patch. Keep the Settings › Updates reset: it is the recovery path if a saved worker is ever stale.
+
 Before carrying any OC1 patch forward, verify the required behavior against this exact V2 base. In particular, test OpenAI OAuth availability for base `gpt-5.6` / Luna. If V2 already supports it, do not recreate the OC1 patch.
 
 ## Patch entry template

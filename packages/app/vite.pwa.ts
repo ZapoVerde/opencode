@@ -23,9 +23,10 @@ export function serviceWorker(directory: string) {
       // Workbox runs after Sentry's upload and cleanup, so do not publish an unuploaded map.
       sourcemap: false,
       globDirectory: directory,
-      clientsClaim: false,
-      // Keep each open tab on its complete build until all old clients close.
-      skipWaiting: false,
+      // This checkout deploys often and does not prompt. The new worker claims the window and the app moves itself
+      // onto the new build, instead of a waiting worker that every open tab has to close for.
+      clientsClaim: true,
+      skipWaiting: true,
       inlineWorkboxRuntime: true,
       navigateFallback: "/index.html",
       // Pairing links must reach the server so it can set the session cookie.

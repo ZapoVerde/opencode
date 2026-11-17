@@ -1,38 +1,24 @@
 import { Icon } from "@opencode/ui/icon"
-import { showToast, toaster } from "@opencode/ui/toast"
+import { showToast } from "@opencode/ui/toast"
 import { createSignal, lazy, onCleanup, Suspense } from "solid-js"
-import { Command, createKeyed, SettingsPage, TitlebarItem, type SetupContext } from "@opencode/plugin/gui"
+import { Command, createKeyed, SettingsPage, type SetupContext } from "@opencode/plugin/gui"
 import { onIdle } from "@opencode/plugin/gui/builtin"
 import { startWebUpdater } from "./web-driver"
-import { initialWebUpdate, webUpdateAction, webUpdatePending, type WebUpdateState } from "./web-machine"
+import { initialWebUpdate, webUpdateAction, type WebUpdateState } from "./web-machine"
 import type definition from "./index"
 
-type Offer = { toast?: number }
-
 /**
- * Updates for the web app and installed web app (PWA): finds the server's newer build, offers it in a toast, the
- * titlebar and Settings › Updates, and moves every open window to it. Settings also offers a full reload from the
- * server for a saved copy that will not update.
+ * Updates for the web app and installed web app (PWA): Settings › Updates offers a check and a full reload from the
+ * server. It does not announce a ready build in a toast or the titlebar; this checkout deploys often, and the worker
+ * in `vite.pwa.ts` now activates and claims the window itself, so an open app moves to the new build without a prompt.
  */
 export function webUpdates(ctx: SetupContext<typeof definition>) {
   const [state, setState] = createSignal<WebUpdateState>(initialWebUpdate)
-  // The one "update ready" toast on screen, replaced when it is offered again.
-  const offer: Offer = {}
 
   const updater = startWebUpdater({
     changed: setState,
-    announce: () => {
-      if (offer.toast !== undefined) toaster.dismiss(offer.toast)
-      offer.toast = showToast({
-        title: ctx.t("web.ready.title"),
-        description: ctx.t("web.ready.message"),
-        persistent: true,
-        actions: [
-          { label: ctx.t("web.reload"), variant: "primary", onClick: () => updater.apply() },
-          { label: ctx.t("dialog.later"), variant: "secondary", onClick: "dismiss" },
-        ],
-      })
-    },
+    // Silent on purpose: no "update ready" toast to dismiss or click through.
+    announce: () => {},
     report: (report) => {
       if (report.result === "up-to-date")
         return void showToast({
@@ -63,20 +49,6 @@ export function webUpdates(ctx: SetupContext<typeof definition>) {
   createKeyed(
     () => state().status !== "unavailable",
     () => {
-      ctx.add(TitlebarItem, () => {
-        const current = state()
-
-        if (!webUpdatePending(current)) return
-
-        return {
-          id: "update",
-          label: ctx.t("status.label"),
-          title: ctx.t(webUpdateAction(current).label),
-          busy: current.status !== "ready",
-          run,
-        }
-      })
-
       ctx.add(SettingsPage, {
         id: "updates",
         page: "general",
