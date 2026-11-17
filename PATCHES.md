@@ -412,6 +412,17 @@ Upstream still does not address any active patch as of `4423f42836`: there is no
 - **Verification:** `bun run test:scout-review` passes offline (evidence standards, unverifiable-flag rejection, XML escaping, the report envelope, and report identification from synthetic metadata — including that another agent's or a non-user message is not reviewed) and is wired into `bun run check`. With `OPENCODE_PASSWORD` set, six live payload shapes pass 6/6 — clean report, reported dead end, and report-quoting-an-injection-it-refused pass; leaked instruction, fake authority, and wrong-question flag. The live half asserts verdict class, so it stays outside `check` as advisory. Re-verified on the 2026-11-04 merge; reworked and reverified offline on the 2026-11-15 merge. On 2026-11-16 the live half was run against the running service (basic credential from the stack environment) and passed 6/6: clean, dead end and quoted injection pass; leaked instruction, fake authority and wrong question flag. That exercises the judge prompt only — the gate's new report-detection path is covered by the offline cases.
 - **When updating:** Check whether upstream ships an agent-level capability split or a subagent-output trust hook; if so, retire the gate half and keep the agent. If the report delivery changes again, follow the report rather than the tool call: the `subagent` tool only acknowledges now. Keep the two evidentiary standards distinct — collapsing misalignment onto the quote standard silently disables the alignment check — and keep pass silent. CaMeL (arXiv:2503.18813) is the correct escalation if Scout becomes load-bearing.
 
+#### Onboarding tips disabled
+
+- **Status:** Applied
+- **Patch branch:** integration-only (commits `060d4e371c` and `40125d6e77`)
+- **Upstream base:** `upstream/dev` / `5d55571d8d`
+- **Files:** `packages/app/src/shell/shell.tsx`, `packages/app/src/tips/model.ts`
+- **Problem:** The onboarding tip queue shows install prompts — "Control your browser" (Chrome extension) and "Use your voice" (Hex) — to every client, including phones where neither can be installed, and there is no setting to turn them off. Dismissing only suppresses the toast in that browser profile.
+- **Fix:** Remove the `createTipToasts()` call from the shell and the `browse` entry from the tip list. The upstream tip modules, queue and tests stay in place, so an upstream change to them merges cleanly; nothing displays them.
+- **Verification:** `packages/app` typecheck passes; the production build succeeds with no fixture flags; `grep -rn 'createTipToasts' packages/app/src` finds only the unused export in `tips/model.ts`.
+- **When updating:** If upstream adds a supported tips-off setting, use it and retire this patch. If a merge re-adds the shell call, remove the call again rather than deleting the tip modules.
+
 Before carrying any OC1 patch forward, verify the required behavior against this exact V2 base. In particular, test OpenAI OAuth availability for base `gpt-5.6` / Luna. If V2 already supports it, do not recreate the OC1 patch.
 
 ## Patch entry template
