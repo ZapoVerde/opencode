@@ -7,7 +7,6 @@ import { prefersReducedMotion } from "@opencode/ui/motion"
 import { Titlebar } from "@/shell/titlebar/titlebar"
 import { usePlatform } from "@/runtime/platform/platform"
 import { ToastRegion } from "@/shell/notifications/toast"
-import { createTipToasts } from "@/tips/model"
 import { UploadToastHost } from "@/composer/attachments/uploads"
 import { useSettingsSurface } from "@/settings/surface"
 import { useSettings } from "@/settings/model"
@@ -44,7 +43,7 @@ export default function Layout(props: ParentProps) {
   const tabs = useTabs()
   const mobile = createMediaQuery("(max-width: 767px)")
 
-  createTipToasts()
+  // Onboarding tips are disabled in this checkout (see PATCHES.md); the tip queue stays upstream so merges stay simple.
 
   const [state, setState] = createStore<{
     tabsWidth: number
