@@ -13,7 +13,7 @@ function ask(index: number): PermissionLog.Request {
     id: `per_${index}`,
     at: index,
     session: "ses_a",
-    agent: "boss",
+    agent: "build",
     action: "shell",
     resources: [`git push origin ${index}`],
     cause: "default",
@@ -32,7 +32,7 @@ describe("permission log", () => {
     await writeFile(file, lines.join("\n") + "\n")
 
     await PermissionLog.record(
-      { id: "per_new", session: "ses_a", agent: "boss", action: "shell", resources: ["cd /tmp"], cause: "default" },
+      { id: "per_new", session: "ses_a", agent: "build", action: "shell", resources: ["cd /tmp"], cause: "default" },
       { directory: dir, at: 10_000 },
     )
 
@@ -72,7 +72,7 @@ describe("permission log", () => {
       {
         id: "per_batch",
         session: "ses_a",
-        agent: "boss",
+        agent: "build",
         action: "shell",
         resources: ["echo hello", "cd /project"],
         asker: "cd /project",
@@ -89,7 +89,7 @@ describe("permission log", () => {
     const dir = await directory()
     const record = (id: string, session: string, command: string, cause: PermissionLog.Cause = "default") =>
       PermissionLog.record(
-        { id, session, agent: "boss", action: "shell", resources: [command], cause },
+        { id, session, agent: "build", action: "shell", resources: [command], cause },
         { directory: dir, at: 1 },
       )
 
@@ -110,7 +110,7 @@ describe("permission log", () => {
   test("records how long the answer took", async () => {
     const dir = await directory()
     await PermissionLog.record(
-      { id: "per_reply", session: "ses_a", agent: "boss", action: "shell", resources: ["git push"], cause: "default" },
+      { id: "per_reply", session: "ses_a", agent: "build", action: "shell", resources: ["git push"], cause: "default" },
       { directory: dir, at: 1_000 },
     )
     await PermissionLog.reply({ id: "per_reply", reply: "session" }, { directory: dir, at: 2_500 })
@@ -137,7 +137,7 @@ describe("permission log", () => {
 
     expect(rows).toEqual([
       {
-        agent: "boss",
+        agent: "build",
         action: "shell",
         cause: "default",
         shape: "cd",
@@ -151,7 +151,7 @@ describe("permission log", () => {
         latency: 100,
       },
       {
-        agent: "boss",
+        agent: "build",
         action: "shell",
         cause: "rule",
         shape: "docker compose up",

@@ -89,7 +89,7 @@ export function describePermission(
     return {
       summary: summaries[category],
       consequence: consequences[category],
-      target: route(agent, request.action, category),
+      target: route(agent, request.action),
     }
   }
 
@@ -113,7 +113,7 @@ export function describePermission(
     return {
       summary: secret ? "permission.summary.editSecret" : "permission.summary.edit",
       consequence: secret ? "permission.consequence.secret" : undefined,
-      target: route(agent, request.action, "default"),
+      target: route(agent, request.action),
     }
   }
 
@@ -121,14 +121,14 @@ export function describePermission(
     return {
       summary: "permission.summary.webfetch",
       consequence: "permission.consequence.network",
-      target: route(agent, request.action, "network"),
+      target: route(agent, request.action),
     }
   }
   if (request.action === "websearch") {
     return {
       summary: "permission.summary.websearch",
       consequence: "permission.consequence.network",
-      target: route(agent, request.action, "network"),
+      target: route(agent, request.action),
     }
   }
   if (request.action === "external_directory") {
@@ -200,22 +200,14 @@ function isSecret(resources: readonly string[]) {
   })
 }
 
-function route(agent: string | undefined, action: string, category: Category): PermissionDescription["target"] {
+function route(agent: string | undefined, action: string): PermissionDescription["target"] {
   const id = agent?.toLowerCase()
-
-  if (id === "build" && (category === "push" || category === "deploy" || category === "github")) {
-    return { agent: "boss", reason: "permission.route.boss" }
-  }
-
-  if (id === "boss" && (action === "edit" || action === "write" || action === "patch")) {
-    return { agent: "build", reason: "permission.route.build" }
-  }
 
   if (id === "plan" && (action === "edit" || action === "write" || action === "patch")) {
     return { agent: "build", reason: "permission.route.build" }
   }
 
-  if ((id === "build" || id === "boss") && (action === "webfetch" || action === "websearch")) {
+  if (id === "build" && (action === "webfetch" || action === "websearch")) {
     return { agent: "plan", reason: "permission.route.plan" }
   }
 

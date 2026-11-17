@@ -86,15 +86,7 @@ describe("permission description", () => {
   })
 
   test("routes work to the agent that owns it", () => {
-    expect(describePermission(command(["git push origin dev"]), "build").target).toEqual({
-      agent: "boss",
-      reason: "permission.route.boss",
-    })
-    expect(describePermission(command(["docker compose up -d"]), "build").target).toEqual({
-      agent: "boss",
-      reason: "permission.route.boss",
-    })
-    expect(describePermission({ action: "edit", resources: ["src/index.ts"] }, "boss").target).toEqual({
+    expect(describePermission({ action: "edit", resources: ["src/index.ts"] }, "plan").target).toEqual({
       agent: "build",
       reason: "permission.route.build",
     })
@@ -104,8 +96,10 @@ describe("permission description", () => {
     })
   })
 
-  test("does not route a job back to the agent already doing it", () => {
-    expect(describePermission(command(["git push origin dev"]), "boss").target).toBeUndefined()
+  test("does not route work the current agent should do itself", () => {
+    // Build promotes its own work; there is no separate boss agent to hand pushes and deploys to.
+    expect(describePermission(command(["git push origin dev"]), "build").target).toBeUndefined()
+    expect(describePermission(command(["docker compose up -d"]), "build").target).toBeUndefined()
     expect(describePermission({ action: "edit", resources: ["src/index.ts"] }, "build").target).toBeUndefined()
     expect(describePermission({ action: "webfetch", resources: ["https://example.com"] }, "plan").target).toBeUndefined()
   })

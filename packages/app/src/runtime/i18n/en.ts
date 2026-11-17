@@ -591,7 +591,6 @@ export const dict = {
   "permission.reviewer.loading": "Reviewing…",
   "permission.reviewer.unavailable": "Review unavailable.",
   "permission.route.title": "This belongs with {{agent}}.",
-  "permission.route.boss": "Boss handles deploys and pushes.",
   "permission.route.build": "Build handles file changes.",
   "permission.route.plan": "Plan handles internet research.",
   "permission.route.switch": "Switch to {{agent}}",
