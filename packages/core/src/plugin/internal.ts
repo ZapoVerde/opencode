@@ -104,7 +104,6 @@ import { CommandPlugin } from "./command.js"
 import { IdentityPlugin } from "./identity.js"
 import { ForkNoticePlugin } from "./fork-notice.js"
 import { PlanPlugin } from "./plan.js"
-import { DesignerPlugin } from "./designer.js"
 import { GoalPlugin } from "./goal.js"
 import { ModelsDevPlugin } from "./models-dev.js"
 import { McpCodeModeDefaultsPlugin } from "./mcp-codemode-defaults.js"
@@ -255,7 +254,6 @@ const pre = [
   AgentPlugin.Plugin,
   ForkNoticePlugin.Plugin,
   PlanPlugin.Plugin,
-  DesignerPlugin.Plugin,
   CommandPlugin.Plugin,
   GoalPlugin.Plugin,
   SkillPlugin.Plugin,

@@ -164,7 +164,8 @@ Upstream still does not address any active patch as of `4423f42836`: there is no
 
 #### OpenAI OAuth: preserve base GPT-5.6 / Luna model availability
 
-- **Status:** Applied
+- **Status:** Retired on 2026-11-17 — the patch made a model selectable that ChatGPT accounts reject. The record stays for what it documented; do not replay it. Upstream's `codexDisallowed = new Set(["gpt-5.6"])` is restored, so the two files are now identical to `upstream/dev`.
+- **Retirement evidence:** A live prompt to `openai/gpt-5.6` through the running OC2 stack failed with `model_not_found: The 'gpt-5.6' model is not supported when using Codex with a ChatGPT account.`, so the patch's only effect was offering a broken entry. The Luna path it was written for needs no patch: `gpt-5.6-luna` is already eligible under upstream's `major > 5 || (major === 5 && minor > 5)` gate and answered a live prompt. No stored session ever selected base `gpt-5.6` (0 of 2,500), the last OpenAI-model session was 2026-10-17, and the live config defines no OpenAI provider. `packages/core` `test/plugin/provider-openai.test.ts` passes 6/6 against the restored upstream code.
 - **Patch branch:** `fix/luna-oauth-model-filtering-v2`
 - **Upstream base:** `upstream/v2` / `b2e6e764a88dbcc9231a2ac1f73d011817f80f98`
 - **Patch commit:** `254dd84db8b9c4c8213597b99965016ce590cd8b`
@@ -188,7 +189,8 @@ Upstream still does not address any active patch as of `4423f42836`: there is no
 
 #### Designer orchestration agent
 
-- **Status:** Applied
+- **Status:** Retired on 2026-11-17 — unused. The record stays for what it documented; do not replay it.
+- **Retirement:** `packages/core/src/plugin/designer.ts` and its test are deleted and `DesignerPlugin.Plugin` is gone from the `pre` list in `packages/core/src/plugin/internal.ts`. Sixteen stored sessions had `agent: "designer"`; all were switched to `build` (all 204s) before the plugin was removed, and `/api/agent` no longer lists it. The last Designer session was 2026-10-27. Its only distinct behavior was appending `PROMPT_DESIGNER` to the shared system prompt; an agent that needs a design-first disposition can carry it in config `system` or `remit`, which is what Build does now.
 - **Patch branch:** `feat/designer-agent`
 - **Upstream base:** `upstream/v2` / `4617210822`
 - **Patch commit:** `6e8dea91f72646f285d10952336a51ef4dbead98`
@@ -401,7 +403,8 @@ Upstream still does not address any active patch as of `4423f42836`: there is no
 
 #### Scout research agent and review gate
 
-- **Status:** Applied
+- **Status:** Retired on 2026-11-17 — never used. The record stays for what it documented; do not replay it.
+- **Retirement:** `.opencode/agent/scout.md`, `.opencode/plugins/scout-review.ts`, `scout-review-judge.txt`, `scout-review.test.mjs` and `docs/scout-agent.md` are deleted, and `test:scout-review` is gone from the root `package.json` (so `bun run check` is back to upstream's `lint && typecheck`). Evidence: 0 stored sessions selected `scout` across 2,500, and no `subagent` call ever named it. The gate fired eight times in total, every one `unreviewed`. Build's live `remit` previously deferred research to Scout and now says Build researches the web and other repositories itself, which its existing `webfetch`/`websearch` allows already permit. If a research split is wanted later, re-derive it: the reworked synthetic-report gate in this entry is the verified design, not the older `tool.execute.after` hook.
 - **Patch branch:** `feat/scout-review-gate-v2`
 - **Patch commit:** `847d8c419c` (integrated as `67d8ee4ebc`)
 - **Upstream base:** `upstream/dev` / `4423f42836`
@@ -444,6 +447,17 @@ Upstream still does not address any active patch as of `4423f42836`: there is no
 - **Fix:** Delete `agents.boss` and the two `subagent: boss` deny rules from the live config; switch the 16 stored sessions that had selected `boss` to `build`; remove the Build push/deploy/GitHub → Boss and Boss edit → Build routing from the permission dock, keeping the Plan ↔ Build routes for research and edits; drop `permission.route.boss` from the English dictionary. The deploy policy itself is unchanged: Build's shell rules still ask for `git push` and `docker compose up` and deny container lifecycle commands.
 - **Verification:** `/api/agent` no longer lists `boss`; all 16 sessions return 204 when switched to `build`; `packages/app` and `packages/util` pass the permission-description (9/9) and permission-log (7/7) suites; `packages/app` typecheck and the production build pass.
 - **When updating:** If upstream ships a real deploy capability split, evaluate a dedicated agent on its merits; otherwise keep Build as the owner and do not recreate the Boss route.
+
+#### Dead files and no-op plugin removed
+
+- **Status:** Applied
+- **Patch branch:** integration-only (this commit)
+- **Upstream base:** `upstream/dev` / `5d55571d8d`
+- **Files:** `services/www/**` (8 files), `packages/posts/**` (6 files), `.opencode/plugins/permission-reviewer.ts`
+- **Problem:** The 2026-11-15 merge resurrected 14 files that upstream had already deleted. `services/www/**` and `packages/posts/**` are Astro output (`content.d.ts`, `content-modules.mjs`, schema JSON) plus committed copies of `openapi.json` and `cli.json` — 24,021 lines and about 4 MB with no `package.json`, no reference from any workspace script, and superseded by `packages/protocol/openapi.json` and upstream's `services/site`. They were the largest single block in the diff against upstream. `permission-reviewer.ts` was an eight-line no-op kept only to defuse a plugin the app-side reviewer replaced.
+- **Fix:** Delete both directories and the no-op plugin. Upstream deleted them in `8521baf8b0`, `14f7cb9db9` and `9ced0469bb`, so the deletions now match upstream rather than being a local deviation.
+- **Verification:** `git ls-tree upstream/dev services/www packages/posts` is empty, and no file in the tree references either path. Root `bun run check` no longer runs `test:scout-review`, and `packages/core` typecheck passes.
+- **When updating:** If a merge brings these paths back, they are upstream's generated output leaking through a delete/modify conflict — delete them again rather than resolving the conflict. Add an ignore rule only if it keeps recurring.
 
 Before carrying any OC1 patch forward, verify the required behavior against this exact V2 base. In particular, test OpenAI OAuth availability for base `gpt-5.6` / Luna. If V2 already supports it, do not recreate the OC1 patch.
 
