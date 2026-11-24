@@ -344,15 +344,6 @@ export const Plugin = {
             })
       invocation.cwd = target.absolute
       const timeout = invocation.timeout
-      const named: string[] = []
-      // The scanner reports each statement's candidate file words, which the path checks below use. A command it
-      // cannot analyze settles its own request through `ShellPermissions` and has no statements to check.
-      const parsed = yield* Effect.result(
-        ShellParse.scan(invocation.command, invocation.shell, target.absolute, {
-          home: target.machine === undefined ? undefined : null,
-          files: (words) => named.push(...words),
-        }),
-      )
       const requests = yield* ShellPermissions.requests(access, {
         command: invocation.command,
         program: invocation.shell,
@@ -368,9 +359,18 @@ export const Plugin = {
         (request) => permission.assert({ ...request, ...Permission.invocation(context) }),
         { discard: true },
       )
+      // The shell decision comes first, so a denied command never asks about files it would have touched, and never
+      // pays for the second scan. `ShellPermissions` already scanned this command once; this scan exists because only
+      // the local scanner records redirect targets and named file words, which upstream's request derivation drops.
+      const named: string[] = []
+      const parsed = yield* Effect.result(
+        ShellParse.scan(invocation.command, invocation.shell, target.absolute, {
+          home: target.machine === undefined ? undefined : null,
+          files: (words) => named.push(...words),
+        }),
+      )
       // A redirect is a file read or write, not just shell text. Assert it as one so a read-shaped
       // allow can never authorise `echo x > file`, and so secret and external-directory rules apply.
-      // The shell decision comes first so a denied command never asks about its writes.
       const redirects = Result.isSuccess(parsed)
         ? parsed.success.commands.flatMap((command) => command.redirects ?? [])
         : []
