@@ -1,7 +1,7 @@
 export * as Permission from "./permission.js"
 
 import { makeLocationNode } from "@opencode/util/effect/app-node"
-import { Context, Deferred, Effect, Layer, Schema } from "effect"
+import { Context, Deferred, Effect, Layer, Schema, Scope } from "effect"
 import { Permission } from "@opencode/schema/permission"
 import { SessionEvent } from "@opencode/schema/session-event"
 import { PermissionLog } from "@opencode/util/permission-log"
@@ -96,6 +96,14 @@ export class NotFoundError extends Schema.TaggedError<NotFoundError>()("Permissi
 
 export type Error = BlockedError | CorrectedError
 
+/** Actions whose resources are file paths. */
+export const pathActions = ["external_directory", "read", "edit"] as const
+
+/** macOS volumes ignore case by default, so `.OPENCODE/x` opens `.opencode/x`; rules for file paths must match it too. */
+export function ignoresCase(action: string) {
+  return process.platform === "darwin" && pathActions.some((item) => item === action)
+}
+
 export function evaluate(action: string, resource: string, ...rulesets: Permission.Ruleset[]): Permission.Rule {
   return match(action, resource, ...rulesets) ?? { action, resource: "*", effect: "ask" }
 }
@@ -103,15 +111,29 @@ export function evaluate(action: string, resource: string, ...rulesets: Permissi
 // The default ruleset asks when nothing matches. Callers that report why an ask happened need to
 // tell that apart from a configured `ask` rule, so they use this and keep `undefined` as "no rule".
 function match(action: string, resource: string, ...rulesets: Permission.Ruleset[]) {
+  const ignoreCase = ignoresCase(action)
   return rulesets
     .flat()
-    .findLast((rule) => Wildcard.match(action, rule.action) && Wildcard.match(resource, rule.resource))
+    .findLast(
+      (rule) => Wildcard.match(action, rule.action) && Wildcard.match(resource, rule.resource, ignoreCase),
+    )
 }
 
 // A configured `*` / `*` ask matches every resource and decides nothing, so it is the fallback in
 // everything but name. Reporting it as the winning rule would hide that no specific rule applied.
 function blanketAsk(rule: Permission.Rule) {
   return rule.effect === "ask" && rule.action === "*" && rule.resource === "*"
+}
+
+/** True when every resource for `action` is denied; trailing narrow denies preserve a blanket deny while any `allow` or `ask` keeps the action reachable. */
+export function isActionDenied(action: string, ...rulesets: Permission.Ruleset[]): boolean {
+  return rulesets
+    .flat()
+    .filter((rule) => Wildcard.match(action, rule.action))
+    .reduce((denied, rule) => {
+      if (rule.resource === "*") return rule.effect === "deny"
+      return rule.effect === "deny" ? denied : false
+    }, false)
 }
 
 export function merge(...rulesets: Permission.Ruleset[]): Permission.Ruleset {
@@ -130,6 +152,11 @@ export interface Interface {
   readonly get: (id: ID) => Effect.Effect<Request | undefined>
   readonly forSession: (sessionID: SessionSchema.ID) => Effect.Effect<ReadonlyArray<Request>>
   readonly list: () => Effect.Effect<ReadonlyArray<Request>>
+  /**
+   * Marks `call` as made by `parent`, such as a call inside a Code Mode program. It has an ID of its own but no row,
+   * so until the scope closes, requests naming it as their source show on `parent`'s row.
+   */
+  readonly nested: (call: Tool.CallID, parent: Tool.CallID) => Effect.Effect<void, never, Scope.Scope>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Permission") {}
@@ -165,6 +192,8 @@ const layer = Layer.effect(
       return Effect.void
     })
     yield* Effect.addFinalizer(() => unsubscribe)
+    // Code Mode calls made by a parent call have no row of their own, so their requests show on the parent's.
+    const parents = new Map<string, Tool.CallID>()
     let closed = false
 
     const close = Effect.gen(function* () {
@@ -253,6 +282,17 @@ const layer = Layer.effect(
       return undefined
     }
 
+    const nested: Interface["nested"] = (call, parent) =>
+      Effect.acquireRelease(
+        Effect.sync(() => void parents.set(call, parent)),
+        () => Effect.sync(() => void parents.delete(call)),
+      )
+
+    function row(source: AssertInput["source"]) {
+      const parent = source && parents.get(source.id)
+      return parent ? { ...source, id: parent } : source
+    }
+
     interface Verdict {
       readonly effect: Permission.Effect
       readonly message?: string
@@ -295,7 +335,7 @@ const layer = Layer.effect(
           action: input.action,
           resources: input.resources,
           metadata: input.metadata,
-          source: input.source,
+          source: row(input.source),
           effect,
         })
         // A `*` / `*` ask is the configured fallback: it matches everything and decides nothing, so it
@@ -370,7 +410,7 @@ const layer = Layer.effect(
         metadata:
           input.metadata &&
           Object.fromEntries(Object.entries(input.metadata).filter(([, value]) => value !== undefined)),
-        source: input.source,
+        source: row(input.source),
         message,
       }
     }
@@ -511,6 +551,7 @@ const layer = Layer.effect(
             yield* logReply(existing.request.id, input.reply)
             for (const [id, item] of pending) {
               if (item.request.sessionID !== existing.request.sessionID) continue
+              if (item.request.source?.messageID !== existing.request.source?.messageID) continue
               yield* bus.publish(Permission.Event.Replied, {
                 sessionID: item.request.sessionID,
                 requestID: item.request.id,
@@ -592,7 +633,7 @@ const layer = Layer.effect(
       return Array.from(pending.values(), (item) => item.request).filter((request) => request.sessionID === sessionID)
     })
 
-    return Service.of({ ask, assert, assertNotDenied, allows, reply, get, forSession, list, close })
+    return Service.of({ ask, assert, assertNotDenied, allows, reply, get, forSession, list, nested, close })
   }),
 )
 

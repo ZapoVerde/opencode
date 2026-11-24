@@ -208,8 +208,16 @@ describe("ShellParse", () => {
     )
     expect(redirects).toEqual({
       commands: [
-        { resource: ">> ~/.zshrc <<< 'x'", save: ">> *" },
-        { resource: "export -p > ~/.bashrc", save: "export *" },
+        {
+          resource: ">> ~/.zshrc <<< 'x'",
+          save: ">> *",
+          redirects: [{ direction: "write", word: "~/.zshrc" }],
+        },
+        {
+          resource: "export -p > ~/.bashrc",
+          save: "export *",
+          redirects: [{ direction: "write", word: "~/.bashrc" }],
+        },
       ],
       directories: [],
     })
@@ -221,7 +229,7 @@ describe("ShellParse", () => {
       commands: [
         { resource: '[IO.File]::Delete("C:\\victim")', save: "[IO.File]::Delete(*" },
         { resource: "$proc.Kill()", save: "$proc.Kill(*" },
-        { resource: '"x" >> ~/.bashrc', save: '"x" *' },
+        { resource: '"x" >> ~/.bashrc', save: '"x" *', redirects: [{ direction: "write", word: "~/.bashrc" }] },
       ],
       directories: [],
     })

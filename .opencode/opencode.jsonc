@@ -16,9 +16,4 @@
   "tools": {
     "github-pr-search": false,
   },
-  "experimental": {
-    "part_rows": true,
-    // The weekly upstream check is a schedule; this document overrides the global experimental block.
-    "schedules": true,
-  },
 }
